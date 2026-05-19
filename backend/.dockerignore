@@ -1,0 +1,37 @@
+# Binaries
+bin/
+
+# Generated code
+db/sqlc/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# Test artifacts
+coverage.out
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Docs (not needed in container)
+../docs/
+../PLAN.md
+../AGENTS.md

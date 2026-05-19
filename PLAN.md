@@ -26,7 +26,7 @@
 - [x] Initial Project Brief & Tech Stack definition.
 - [x] Data Contract & Schema Engineering (`docs/schema.md`).
 - [x] Resolve open design questions (calendar-month reset, non-refundable fee, data retention).
-- [ ] Initialize Go Backend (Gin + sqlc + golang-migrate).
+- [x] Initialize Go Backend (Gin + sqlc + golang-migrate).
 - [ ] Initialize Admin Dashboard (Next.js + shadcn).
 - [ ] Initialize Mobile App (Expo + NativeWind).
 
@@ -73,6 +73,7 @@
 | 2026-05-19 | 🔄 Brief Rev 2 | Specified Africa/Douala timezone for all date boundaries. Clarified kill switch scope (block new, let in-flight finish, flag for review). Added Campay webhook HMAC authentication requirement. Clarified survey triggers on final status only. Added data retention policy (indefinite). |
 | 2026-05-19 | 🔄 Stack Rev 2 | Added Supabase PG-17 compatibility note. Added Maestro for mobile E2E testing. Added CI/CD pipeline section (GitHub Actions). |
 | 2026-05-19 | ✅ Design Decisions | Calendar-month reset (Jan 31 + Feb 15 = both allowed). 5 XAF fee is non-refundable. Data retained indefinitely post-pilot. |
+| 2026-05-19 | 🏗️ Backend Init | Go backend scaffolded: Gin server with graceful shutdown, `slog` structured logging, request ID middleware, pgxpool connection, `caarlos0/env` + `godotenv` config loading. Makefile (run/build/docker-build/lint/test/generate/migrate-up/migrate-down/migrate-force/migrate-create/clean/install-tools). Dockerfile (multi-stage Go 1.26-alpine → alpine). Migrations: `000001_schema.up/down.sql` (full DDL), `000002_seed_kill_switch.up/down.sql`. sqlc config with pgx/v5 + uuid/time/decimal overrides. `.golangci.yml` with errcheck/govet/bodyclose/noctx. `.env` + `.env.example` with Neon/local DB placeholders. Health endpoint at `GET /health`. |
 
 ---
 

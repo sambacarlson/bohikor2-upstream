@@ -25,9 +25,13 @@
 
 - **HTTP Router / Web Framework:** `Gin Web Framework` (High performance, explicit context bindings).
 - **Database Access & Code Generation:** `sqlc` (Compile-time type-safe Go code generation directly from raw SQL schemas and queries).
-- **Database Migrations:** `golang-migrate` (Go-native tool compiled into the binary or run as an independent utility to handle SQL schema states).
+- **Database Migrations:** `golang-migrate` (Go-native tool compiled into the binary or run as an independent utility to handle SQL schema states). Migration files use `.up.sql` / `.down.sql` convention. Migrations are **manual** — never auto-run on server start.
 - **Authentication Handler:** `firebase-admin-go` (Firebase Admin Go SDK to verify client-side Firebase Auth ID tokens, decode claims, and manage stateless security contexts).
 - **Structured Logging / Observability:** Go Standard Library `slog` (Structured JSON log output parsed directly by cloud platform logging drains).
+- **Configuration:** `caarlos0/env` for environment variable parsing + `godotenv` for `.env` file loading in development.
+- **HTTP Client:** `net/http` standard library (no external HTTP client needed).
+- **Database Driver:** `pgx/v5` via `pgxpool` (connection pooling with health checks).
+- **Build & Dev Tooling:** Standalone `Makefile` in `backend/` — all commands run from within `backend/` directory. Dockerfile uses multi-stage build (Go 1.26-alpine → alpine:3.20).
 
 ## 4. Admin Dashboard Stack (Next.js)
 
