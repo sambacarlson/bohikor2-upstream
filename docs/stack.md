@@ -4,9 +4,9 @@
 
 - **Backend Runtime:** `Go 1.26`
 - **Admin Front-End Engine:** `Node.js 22.x LTS`
-- **Admin Framework:** `Next.js 15.x` (React 19, Strict TypeScript)
+- **Admin Framework:** `Next.js 16.x` (React 19, Strict TypeScript)
 - **Mobile Runtime:** `Node.js 22.x LTS`
-- **Mobile Framework:** `React Native 0.85` (Strict TypeScript)
+- **Mobile Framework:** `React Native 0.81` (Strict TypeScript)
 - **Mobile Ecosystem:** `Expo SDK 54`
 
 ## 2. Infrastructure, Database & Topology
@@ -36,14 +36,14 @@
 ## 4. Admin Dashboard Stack (Next.js)
 
 - **UI Foundation & Design System:** `shadcn/ui` (Radix UI primitives tailored via Tailwind CSS).
-- **Styling Engine:** `Tailwind CSS` (Utility-first styling matching shadcn structures).
+- **Styling Engine:** `Tailwind CSS v4` (CSS-first configuration with `@theme` and `@import` directives; no `tailwind.config.js`).
 - **Server State & Data Fetching:** `TanStack React Query` (Declarative caching, auto-refreshes, and mutations).
 - **Authentication Subsystem:** `firebase/auth` (Firebase Client SDK integrated into Next.js for admin authentication state management).
 - **Component Compilation:** Next.js App Router with React Server Components (RSC) architecture.
 
 ## 5. Mobile Application Stack (React Native & Expo)
 
-- **Styling & Presentation Layer:** `NativeWind` (Tailwind CSS configuration layer mapping utility classes natively to React Native primitives).
+- **Styling & Presentation Layer:** `NativeWind v5` (Tailwind CSS v4 native mapping via `react-native-css-interop`; CSS-first `@import "tailwindcss"` configuration).
 - **State Management & Network Sync:** `TanStack React Query` (Shared query paradigms matching the Admin frontend).
 - **Navigation Architecture:** `Expo Router` (File-based routing built on top of React Navigation).
 - **Authentication Infrastructure:** `firebase/auth` (Client-side user registration, passwordless links/email OTP, and token refresh handling).
