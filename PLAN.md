@@ -8,7 +8,7 @@
 | **1. Identity & Auth (Firebase)** | ⚪ | P0 | Fullstack |
 | **2. Mobile: Onboarding & Phone Verification** | ⚪ | P1 | Mobile |
 | **3. Backend: Eligibility & Campay Payouts** | ⚪ | P0 | Backend |
-| **4. Admin: Monitoring & Kill Switch** | ⚪ | P1 | Admin |
+| **4. Admin: Monitoring & Kill Switch** | 🏗️ | P1 | Admin |
 | **5. Observability & Event Logging** | ⚪ | P1 | Backend |
 | **6. Pilot Launch & Feedback Loop** | ⚪ | P2 | Fullstack |
 
@@ -27,7 +27,7 @@
 - [x] Data Contract & Schema Engineering (`docs/schema.md`).
 - [x] Resolve open design questions (calendar-month reset, non-refundable fee, data retention).
 - [x] Initialize Go Backend (Gin + sqlc + golang-migrate).
-- [ ] Initialize Admin Dashboard (Next.js + shadcn).
+- [x] Initialize Admin Dashboard (Next.js + shadcn).
 - [ ] Initialize Mobile App (Expo + NativeWind).
 
 ### 1. Identity & Auth (Firebase)
@@ -74,6 +74,7 @@
 | 2026-05-19 | 🔄 Stack Rev 2 | Added Supabase PG-17 compatibility note. Added Maestro for mobile E2E testing. Added CI/CD pipeline section (GitHub Actions). |
 | 2026-05-19 | ✅ Design Decisions | Calendar-month reset (Jan 31 + Feb 15 = both allowed). 5 XAF fee is non-refundable. Data retained indefinitely post-pilot. |
 | 2026-05-19 | 🏗️ Backend Init | Go backend scaffolded: Gin server with graceful shutdown, `slog` structured logging, request ID middleware, pgxpool connection, `caarlos0/env` + `godotenv` config loading. Makefile (run/build/docker-build/lint/test/generate/migrate-up/migrate-down/migrate-force/migrate-create/clean/install-tools). Dockerfile (multi-stage Go 1.26-alpine → alpine). Migrations: `000001_schema.up/down.sql` (full DDL), `000002_seed_kill_switch.up/down.sql`. sqlc config with pgx/v5 + uuid/time/decimal overrides. `.golangci.yml` with errcheck/govet/bodyclose/noctx. `.env` + `.env.example` with Neon/local DB placeholders. Health endpoint at `GET /health`. |
+| 2026-05-19 | 🏗️ Admin Init | Admin dashboard scaffolded: Next.js 16 + shadcn/ui (radix) + Tailwind v4 + TanStack React Query + Firebase auth + Axios with token interceptor. Pages: login (email/password), dashboard overview (stats cards), users (table + suspend/activate), requests (table + status filter), kill switch (toggle + status), events (log table). Auth guard protects all dashboard routes. TypeScript types match backend schema. `.env.local` with Firebase + API placeholders. `npm run lint` and `npm run typecheck` pass clean. Auth flow spec in `docs/features/auth.md`. |
 
 ---
 
