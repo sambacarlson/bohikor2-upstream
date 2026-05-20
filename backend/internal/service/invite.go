@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	db "github.com/Iknite-Space/bohikor2/db/sqlc"
@@ -16,7 +15,11 @@ var ErrActiveInvitationExists = errors.New("an active invitation already exists 
 
 type InviteStore interface {
 	GetInvitationByEmail(ctx context.Context, email string) (db.Invitation, error)
-	CreateInvitation(ctx context.Context, email string, invitedBy uuid.UUID) (db.Invitation, error)
+	CreateInvitation(ctx context.Context, email string, invitedBy pgtype.UUID) (db.Invitation, error)
+}
+
+type AdminQuerier interface {
+	GetAdminByFirebaseUID(ctx context.Context, firebaseUid string) (db.Admin, error)
 }
 
 type EmailSender interface {
@@ -24,14 +27,16 @@ type EmailSender interface {
 }
 
 type InviteService struct {
-	store InviteStore
-	email EmailSender
+	store   InviteStore
+	email   EmailSender
+	querier AdminQuerier
 }
 
-func NewInviteService(store InviteStore, email EmailSender) *InviteService {
+func NewInviteService(store InviteStore, email EmailSender, querier AdminQuerier) *InviteService {
 	return &InviteService{
-		store: store,
-		email: email,
+		store:   store,
+		email:   email,
+		querier: querier,
 	}
 }
 
@@ -39,7 +44,14 @@ type InviteResult struct {
 	Invitation db.Invitation
 }
 
-func (s *InviteService) Invite(ctx context.Context, email string, invitedBy uuid.UUID) (*InviteResult, error) {
+func (s *InviteService) Invite(ctx context.Context, email string, invitedByFirebaseUID string) (*InviteResult, error) {
+	admin, err := s.querier.GetAdminByFirebaseUID(ctx, invitedByFirebaseUID)
+	if err != nil {
+		return nil, fmt.Errorf("lookup admin: %w", err)
+	}
+
+	invitedBy := pgtype.UUID{Bytes: admin.ID, Valid: true}
+
 	existing, err := s.store.GetInvitationByEmail(ctx, email)
 	if err == nil {
 		if existing.Status == db.InvitationStatusSent || existing.Status == db.InvitationStatusAccepted {
@@ -71,15 +83,11 @@ func (s *RealInviteStore) GetInvitationByEmail(ctx context.Context, email string
 	return s.queries.GetInvitationByEmail(ctx, email)
 }
 
-func (s *RealInviteStore) CreateInvitation(ctx context.Context, email string, invitedBy uuid.UUID) (db.Invitation, error) {
-	var uid pgtype.UUID
-	if err := uid.Scan(invitedBy); err != nil {
-		return db.Invitation{}, fmt.Errorf("convert invited_by to pgtype.UUID: %w", err)
-	}
+func (s *RealInviteStore) CreateInvitation(ctx context.Context, email string, invitedBy pgtype.UUID) (db.Invitation, error) {
 	return s.queries.CreateInvitation(ctx, db.CreateInvitationParams{
 		Email:     email,
 		Status:    db.InvitationStatusSent,
-		InvitedBy: uid,
+		InvitedBy: invitedBy,
 		SentAt:    time.Now().UTC(),
 	})
 }

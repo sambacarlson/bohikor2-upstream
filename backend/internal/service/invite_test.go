@@ -31,17 +31,15 @@ func (m *mockStore) GetInvitationByEmail(ctx context.Context, email string) (db.
 	return *m.invitation, nil
 }
 
-func (m *mockStore) CreateInvitation(ctx context.Context, email string, invitedBy uuid.UUID) (db.Invitation, error) {
+func (m *mockStore) CreateInvitation(ctx context.Context, email string, invitedBy pgtype.UUID) (db.Invitation, error) {
 	if m.createErr != nil {
 		return db.Invitation{}, m.createErr
 	}
-	uid := pgtype.UUID{}
-	_ = uid.Scan(invitedBy)
 	return db.Invitation{
 		ID:        uuid.New(),
 		Email:     email,
 		Status:    db.InvitationStatusSent,
-		InvitedBy: uid,
+		InvitedBy: invitedBy,
 		SentAt:    time.Now().UTC(),
 	}, nil
 }
@@ -54,13 +52,34 @@ func (m *mockEmailSender) SendInvitation(ctx context.Context, email string) erro
 	return m.sendErr
 }
 
+type mockAdminQuerier struct {
+	admin    *db.Admin
+	adminErr error
+}
+
+func (m *mockAdminQuerier) GetAdminByFirebaseUID(ctx context.Context, firebaseUid string) (db.Admin, error) {
+	if m.adminErr != nil {
+		return db.Admin{}, m.adminErr
+	}
+	if m.admin == nil {
+		return db.Admin{}, errTestNotFound
+	}
+	return *m.admin, nil
+}
+
 func TestInvite_HappyPath(t *testing.T) {
 	store := &mockStore{}
 	emailSender := &mockEmailSender{}
-	svc := NewInviteService(store, emailSender)
+	adminQuerier := &mockAdminQuerier{
+		admin: &db.Admin{
+			ID:          uuid.New(),
+			Email:       "admin@example.com",
+			FirebaseUid: "firebase-uid-123",
+		},
+	}
+	svc := NewInviteService(store, emailSender, adminQuerier)
 
-	adminID := uuid.New()
-	result, err := svc.Invite(context.Background(), "newadmin@example.com", adminID)
+	result, err := svc.Invite(context.Background(), "newadmin@example.com", "firebase-uid-123")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -82,9 +101,12 @@ func TestInvite_ActiveInvitationExists(t *testing.T) {
 			Status: db.InvitationStatusSent,
 		},
 	}
-	svc := NewInviteService(store, &mockEmailSender{})
+	adminQuerier := &mockAdminQuerier{
+		admin: &db.Admin{ID: uuid.New(), FirebaseUid: "firebase-uid-123"},
+	}
+	svc := NewInviteService(store, &mockEmailSender{}, adminQuerier)
 
-	_, err := svc.Invite(context.Background(), "existing@example.com", uuid.New())
+	_, err := svc.Invite(context.Background(), "existing@example.com", "firebase-uid-123")
 	if err == nil {
 		t.Fatal("expected error for active invitation")
 	}
@@ -100,9 +122,12 @@ func TestInvite_AcceptedInvitationExists(t *testing.T) {
 			Status: db.InvitationStatusAccepted,
 		},
 	}
-	svc := NewInviteService(store, &mockEmailSender{})
+	adminQuerier := &mockAdminQuerier{
+		admin: &db.Admin{ID: uuid.New(), FirebaseUid: "firebase-uid-123"},
+	}
+	svc := NewInviteService(store, &mockEmailSender{}, adminQuerier)
 
-	_, err := svc.Invite(context.Background(), "accepted@example.com", uuid.New())
+	_, err := svc.Invite(context.Background(), "accepted@example.com", "firebase-uid-123")
 	if err == nil {
 		t.Fatal("expected error for accepted invitation")
 	}
@@ -119,9 +144,12 @@ func TestInvite_ReinviteAfterExpiry(t *testing.T) {
 		},
 	}
 	emailSender := &mockEmailSender{}
-	svc := NewInviteService(store, emailSender)
+	adminQuerier := &mockAdminQuerier{
+		admin: &db.Admin{ID: uuid.New(), FirebaseUid: "firebase-uid-123"},
+	}
+	svc := NewInviteService(store, emailSender, adminQuerier)
 
-	result, err := svc.Invite(context.Background(), "expired@example.com", uuid.New())
+	result, err := svc.Invite(context.Background(), "expired@example.com", "firebase-uid-123")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -133,10 +161,24 @@ func TestInvite_ReinviteAfterExpiry(t *testing.T) {
 func TestInvite_EmailSendFails(t *testing.T) {
 	store := &mockStore{}
 	emailSender := &mockEmailSender{sendErr: errTestSendFailed}
-	svc := NewInviteService(store, emailSender)
+	adminQuerier := &mockAdminQuerier{
+		admin: &db.Admin{ID: uuid.New(), FirebaseUid: "firebase-uid-123"},
+	}
+	svc := NewInviteService(store, emailSender, adminQuerier)
 
-	_, err := svc.Invite(context.Background(), "fail@example.com", uuid.New())
+	_, err := svc.Invite(context.Background(), "fail@example.com", "firebase-uid-123")
 	if err == nil {
 		t.Fatal("expected error when email send fails")
+	}
+}
+
+func TestInvite_AdminNotFound(t *testing.T) {
+	store := &mockStore{}
+	adminQuerier := &mockAdminQuerier{adminErr: errTestNotFound}
+	svc := NewInviteService(store, &mockEmailSender{}, adminQuerier)
+
+	_, err := svc.Invite(context.Background(), "newadmin@example.com", "unknown-firebase-uid")
+	if err == nil {
+		t.Fatal("expected error when admin not found")
 	}
 }

@@ -24,7 +24,7 @@ type mockInviteQuerier struct {
 	err    error
 }
 
-func (m *mockInviteQuerier) Invite(ctx context.Context, email string, invitedBy uuid.UUID) (*service.InviteResult, error) {
+func (m *mockInviteQuerier) Invite(ctx context.Context, email string, invitedBy string) (*service.InviteResult, error) {
 	return m.result, m.err
 }
 

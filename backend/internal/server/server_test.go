@@ -13,6 +13,7 @@ import (
 	"firebase.google.com/go/v4/auth"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	db "github.com/Iknite-Space/bohikor2/db/sqlc"
 	"github.com/Iknite-Space/bohikor2/internal/handler"
@@ -217,7 +218,7 @@ func (m *mockInviteStore) GetInvitationByEmail(ctx context.Context, email string
 	return *m.invitation, nil
 }
 
-func (m *mockInviteStore) CreateInvitation(ctx context.Context, email string, invitedBy uuid.UUID) (db.Invitation, error) {
+func (m *mockInviteStore) CreateInvitation(ctx context.Context, email string, invitedBy pgtype.UUID) (db.Invitation, error) {
 	if m.createErr != nil {
 		return db.Invitation{}, m.createErr
 	}
@@ -257,7 +258,7 @@ func TestInviteEndpoint_AdminInvites(t *testing.T) {
 		invitation: nil,
 	}
 	emailSender := &mockEmailSender{}
-	inviteSvc := service.NewInviteService(inviteStore, emailSender)
+	inviteSvc := service.NewInviteService(inviteStore, emailSender, adminQuerier)
 
 	r := gin.New()
 	r.Use(middleware.FirebaseAuth(verifier))
@@ -307,7 +308,7 @@ func TestInviteEndpoint_DuplicateInvitation(t *testing.T) {
 			Status: db.InvitationStatusSent,
 		},
 	}
-	inviteSvc := service.NewInviteService(inviteStore, &mockEmailSender{})
+	inviteSvc := service.NewInviteService(inviteStore, &mockEmailSender{}, adminQuerier)
 
 	r := gin.New()
 	r.Use(middleware.FirebaseAuth(verifier))

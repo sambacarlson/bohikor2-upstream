@@ -59,7 +59,7 @@ func New(cfg *config.Config) (*Server, error) {
 	queries := db.New(pool)
 
 	inviteStore := service.NewRealInviteStore(queries)
-	inviteService := service.NewInviteService(inviteStore, emailClient)
+	inviteService := service.NewInviteService(inviteStore, emailClient, queries)
 
 	router := gin.New()
 	router.Use(gin.Recovery())
@@ -86,6 +86,7 @@ func New(cfg *config.Config) (*Server, error) {
 		adminGroup.GET("/me", handleAdminMe(queries))
 		adminGroup.POST("/invite", handler.HandleInvite(inviteService))
 		adminGroup.GET("/invitations", handler.HandleListInvitations(queries))
+		adminGroup.GET("/users", handler.HandleListUsers(queries))
 	}
 
 	// User routes (protected by Firebase auth + active user check)

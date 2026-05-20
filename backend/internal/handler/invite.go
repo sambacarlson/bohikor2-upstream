@@ -6,13 +6,12 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 
 	"github.com/Iknite-Space/bohikor2/internal/service"
 )
 
 type InviteQuerier interface {
-	Invite(ctx context.Context, email string, invitedBy uuid.UUID) (*service.InviteResult, error)
+	Invite(ctx context.Context, email string, invitedBy string) (*service.InviteResult, error)
 }
 
 type inviteRequest struct {
@@ -27,10 +26,9 @@ func HandleInvite(q InviteQuerier) gin.HandlerFunc {
 			return
 		}
 
-		adminIDStr := c.GetString("firebase_uid")
-		adminID, err := uuid.Parse(adminIDStr)
-		if err != nil {
-			JSONError(c, http.StatusInternalServerError, "internal_error", "invalid admin ID")
+		adminID := c.GetString("firebase_uid")
+		if adminID == "" {
+			JSONError(c, http.StatusUnauthorized, "unauthorized", "missing admin identity")
 			return
 		}
 
