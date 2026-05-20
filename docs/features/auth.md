@@ -2,14 +2,14 @@
 
 ## Overview
 
-All authentication uses Firebase Auth. Admins authenticate via email/password. Employees authenticate via passwordless Email OTP (magic link). The backend verifies Firebase ID tokens on every API request using `firebase-admin-go`. Admins are provisioned via invitation flow — no self-signup for admin accounts.
+Authentication is phone-first. Employees use their phone number as their primary identity, verified via Firebase Phone OTP. Email is verified separately via a 6-digit OTP sent through Resend. The backend verifies Firebase ID tokens on every API request using `firebase-admin-go`. Admins authenticate via email/password. Admins are provisioned via invitation flow — no self-signup for admin accounts.
 
 ## User Types & Auth Methods
 
 | Type | Auth Method | Provisioning |
 | :--- | :--- | :--- |
 | **Admin** | Firebase Email/Password | Admin invite → create user in Firebase → store in `admins` table |
-| **Employee** | Firebase Email OTP (passwordless) | Admin sends invitation → employee signs up via mobile app |
+| **Employee** | Firebase Phone OTP (primary identity) | Admin sends invitation → employee signs up via mobile app with email + phone |
 
 ## Firebase Project Setup
 
@@ -25,16 +25,32 @@ All authentication uses Firebase Auth. Admins authenticate via email/password. E
 In Firebase Console → Authentication → Sign-in method:
 
 - **Email/Password**: Enable (for admin login)
-- **Email link (passwordless)**: Enable (for employee OTP/magic link)
+- **Phone**: Enable (for employee phone OTP verification)
 
-### 3. Generate Admin SDK Credentials
+### 3. Configure App Attestation (Android)
+
+For Firebase Phone Auth on Android, configure SafetyNet/Play Integrity:
+
+1. Go to Google Cloud Console → APIs & Services
+2. Enable SafetyNet API
+3. Add SHA-256 certificate fingerprints to Firebase project settings
+4. For Expo: run `eas credentials` to get fingerprints
+
+### 4. Configure APNs (iOS)
+
+For silent phone verification on iOS:
+
+1. Upload APNs authentication key to Firebase Console
+2. Enable Push Notifications capability in Xcode project
+
+### 5. Generate Admin SDK Credentials
 
 1. Go to Project Settings → Service Accounts
 2. Click "Generate new private key"
 3. Download the JSON file
 4. Store as `FIREBASE_CREDENTIALS_JSON` env var (base64-encoded for deployment) or file path for local dev
 
-### 4. Get Web App Config
+### 6. Get Web App Config
 
 1. Go to Project Settings → General → Your apps → Web app
 2. Register app (nickname: `bohikor2-admin` or `bohikor2-mobile`)
@@ -64,9 +80,10 @@ EXPO_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abc123
 ```
 FIREBASE_PROJECT_ID=bohikor2-xxx
 FIREBASE_CREDENTIALS_JSON={"type":"service_account",...}
+RESEND_API_KEY=re_xxx
 ```
 
-### 5. Add Authorized Domains
+### 7. Add Authorized Domains
 
 In Firebase Console → Authentication → Settings → Authorized domains:
 
@@ -131,25 +148,68 @@ In Firebase Console → Authentication → Settings → Authorized domains:
 
 ## Employee Auth Flow
 
-### Employee Sign-Up (Email OTP / Magic Link)
+### Employee Sign-Up (Phone-First: Email OTP → Phone OTP)
 
-**Location:** Mobile app (not yet built)
+**Location:** Mobile app
 
 **Flow:**
-1. Employee receives invitation email with link to download mobile app
-2. Employee opens app, enters email
-3. App calls `sendSignInLinkToEmail(auth, email, actionCodeSettings)` (Firebase SDK)
-4. Employee receives email with magic link
-5. Employee clicks link → opens mobile app (deep link / universal link)
-6. App calls `isSignInWithEmailLink(auth, url)` then `signInWithEmailLink(auth, email, url)`
-7. On success, backend receives Firebase ID token, creates `users` record (`email`, `firebase_uid`)
-8. Employee is now authenticated
+
+#### Step 1: Enter Email + Phone
+1. Employee opens app, enters email and phone number
+2. App calls `POST /api/auth/check-invitation` with email
+3. Backend checks `invitations` table for matching email with `status = 'sent'`
+4. If invited → proceed to Step 2. If not → show error, stay on screen
+
+#### Step 2: Email OTP Verification
+1. Backend generates 6-digit code, stores with 10-minute expiry, sends via Resend
+2. Employee enters the 6-digit code from their email
+3. App calls `POST /api/auth/verify-email-otp` with email + code
+4. Backend validates code → returns email verification token/claim
+5. On success, persist email-verified state locally (AsyncStorage)
+
+#### Step 3: Phone OTP Verification (Firebase Phone Auth)
+1. App calls Firebase `signInWithPhoneNumber(phoneNumber)`
+2. Firebase sends SMS with OTP
+3. Employee enters the 6-digit code from SMS
+4. App calls Firebase `confirmationResult.confirm(code)`
+5. Firebase returns user credential with ID token
+6. App calls `POST /api/auth/complete-signup` with:
+   - Firebase ID token
+   - Email (verified in Step 2)
+   - Phone number
+7. Backend:
+   - Verifies Firebase ID token
+   - Checks email was previously verified (via session/token claim)
+   - Creates `users` record (`email`, `email_verified = true`, `firebase_uid`, `phone_number`, `phone_verified = true`, `status = 'active'`)
+   - Updates `invitations` record (`status = 'accepted'`, `accepted_at = NOW()`)
+   - Logs event: `signup_completed`
+   - Returns user object + auth token
+8. Employee is redirected to main screen
 
 **API Endpoints Required:**
-- `POST /api/auth/verify` — Verify Firebase ID token, create/return user record
-- `POST /api/auth/terms` — Record terms acceptance (`is_terms_accepted = true`, `terms_accepted_at`, `terms_version`, `user_ip_at_consent`)
+- `POST /api/auth/check-invitation` — Check if email has pending invitation
+- `POST /api/auth/send-email-otp` — Generate and send email OTP via Resend
+- `POST /api/auth/verify-email-otp` — Verify email OTP code
+- `POST /api/auth/complete-signup` — Finalize signup with Firebase token + email + phone
+- `POST /api/auth/verify` — Verify Firebase ID token for returning users (login)
+- `POST /api/auth/terms` — Record terms acceptance
 
-**Database:** `users` table
+**Database:** `users` table, `invitations` table
+
+### Employee Login (Returning User)
+
+**Location:** Mobile app `/(auth)/login`
+
+**Flow:**
+1. Employee enters phone number
+2. Firebase Phone OTP flow (same as Step 3 of sign-up)
+3. App calls `POST /api/auth/verify` with Firebase ID token
+4. Backend:
+   - Verifies token
+   - Checks `auth_time` claim — if > 30 days since last auth, reject with `reauth_required`
+   - Looks up user by `firebase_uid`
+   - Checks `users.status` — if `suspended`, reject
+   - Returns user object
 
 ### Employee Sign-Out (Mobile)
 
@@ -185,6 +245,16 @@ func FirebaseAuth(client *auth.Client) gin.HandlerFunc {
             return
         }
 
+        // Check 30-day session expiry
+        authTime := time.Unix(int64(idToken.Claims["auth_time"].(float64)), 0)
+        if time.Since(authTime) > 30*24*time.Hour {
+            c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+                "error": "session_expired",
+                "reauth_required": true,
+            })
+            return
+        }
+
         c.Set("firebase_uid", idToken.UID)
         c.Set("email", idToken.Claims["email"])
         c.Next()
@@ -210,7 +280,8 @@ func FirebaseAuth(client *auth.Client) gin.HandlerFunc {
 4. Suspended user cannot authenticate — Firebase returns disabled account error
 5. Admin can reverse with "Activate" → `PUT /api/users/:id/activate`
    - Sets `users.status = 'active'` and `updated_at = NOW()`
-   - Logs event: re-enables Firebase user
+   - Logs event: `user_activated`
+   - Re-enables Firebase user
 
 **API Endpoints Required:**
 - `PUT /api/users/:id/suspend` — Suspend user
@@ -227,8 +298,10 @@ func FirebaseAuth(client *auth.Client) gin.HandlerFunc {
 - Employee endpoints verify `firebase_uid` exists in `users` table and `status = 'active'`
 - Suspended users are disabled at Firebase level — cannot obtain valid ID tokens
 - Firebase ID tokens expire after 1 hour; client SDK auto-refreshes
+- Sessions expire after 30 days (`auth_time` claim check); re-authentication required
 - Axios interceptor in admin dashboard attaches fresh token on every request
 - No passwords stored in database — Firebase manages all credentials
+- Email OTP codes expire after 10 minutes, max 5 attempts before 15-minute lockout
 
 ---
 
@@ -237,20 +310,33 @@ func FirebaseAuth(client *auth.Client) gin.HandlerFunc {
 ### Firebase Setup
 - [ ] Create Firebase project
 - [ ] Enable Email/Password auth (admin)
-- [ ] Enable Email link/passwordless auth (employee)
+- [ ] Enable Phone auth (employee)
+- [ ] Configure Android SafetyNet/Play Integrity
+- [ ] Configure iOS APNs for silent verification
 - [ ] Generate Admin SDK service account JSON
 - [ ] Register web app and copy config to `admin/.env.local`
 - [ ] Register mobile app and copy config to `mobile/.env`
 - [ ] Add `FIREBASE_CREDENTIALS_JSON` to `backend/.env`
 - [ ] Add authorized domains (localhost, Vercel, etc.)
 
+### Resend Setup
+- [ ] Create Resend account
+- [ ] Verify sending domain
+- [ ] Add `RESEND_API_KEY` to `backend/.env`
+
 ### Backend (Go)
 - [ ] Initialize `firebase-admin-go` with service account credentials
-- [ ] Implement Firebase auth middleware (token verification)
-- [ ] Implement `POST /api/auth/verify` — verify token, create/return user
-- [ ] Implement `POST /api/admins/invite` — create invitation + Firebase user + send email via Resend
+- [ ] Initialize Resend client
+- [ ] Implement Firebase auth middleware (token verification + 30-day expiry check)
+- [ ] Implement `POST /api/auth/check-invitation` — check pending invitation
+- [ ] Implement `POST /api/auth/send-email-otp` — generate + send email OTP
+- [ ] Implement `POST /api/auth/verify-email-otp` — verify email OTP
+- [ ] Implement `POST /api/auth/complete-signup` — create user, accept invitation
+- [ ] Implement `POST /api/auth/verify` — verify token for returning users
+- [ ] Implement `POST /api/auth/terms` — record terms acceptance
 - [ ] Implement `PUT /api/users/:id/suspend` — suspend user + disable Firebase
 - [ ] Implement `PUT /api/users/:id/activate` — activate user + re-enable Firebase
+- [ ] Implement `POST /api/admins/invite` — create invitation + Firebase user + send email
 - [ ] Implement `GET /api/admins` — list admins
 - [ ] Implement `DELETE /api/admins/:id` — revoke admin
 - [ ] Log all auth events to `events` table
@@ -265,7 +351,12 @@ func FirebaseAuth(client *auth.Client) gin.HandlerFunc {
 - [ ] Handle Firebase token refresh in Axios interceptor (already implemented)
 
 ### Mobile App (Expo)
-- [ ] Email OTP sign-up screen
-- [ ] Magic link handling (deep link / universal link)
+- [ ] Signup screen (email + phone input, invitation check)
+- [ ] Email OTP verification screen
+- [ ] Phone OTP verification screen (Firebase Phone Auth)
+- [ ] Persist verification state (AsyncStorage)
+- [ ] Login screen (phone number input)
+- [ ] Complete signup flow → create user, accept invitation
+- [ ] Terms acceptance screen
 - [ ] Sign out button
 - [ ] Firebase token attachment to API requests (Axios interceptor)

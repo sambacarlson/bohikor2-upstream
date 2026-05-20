@@ -42,11 +42,7 @@ export default function TermsScreen() {
               5. The advance will be deducted from your next salary payment.
             </Text>
             <Text className="text-base text-gray-700 mb-2">
-              6. A non-refundable verification fee of 5 XAF applies for phone
-              verification.
-            </Text>
-            <Text className="text-base text-gray-700 mb-2">
-              7. Payouts are processed automatically via mobile money (Campay).
+              6. Payouts are processed automatically via mobile money (Campay).
             </Text>
           </View>
 

@@ -46,7 +46,7 @@
 - **Styling & Presentation Layer:** `NativeWind v4` (Tailwind CSS v3 with `nativewind/babel` + `nativewind/metro`; `tailwind.config.js` using `nativewind/preset`).
 - **State Management & Network Sync:** `TanStack React Query` (Shared query paradigms matching the Admin frontend).
 - **Navigation Architecture:** `Expo Router` (File-based routing built on top of React Navigation).
-- **Authentication Infrastructure:** `firebase/auth` (Client-side user registration, passwordless links/email OTP, and token refresh handling).
+- **Authentication Infrastructure:** `firebase/auth` (Firebase Phone Auth for employee identity, Email/Password for admin). `Resend` for email OTP delivery during signup.
 - **Network Client:** `Axios` (Configured with automated interceptors for attaching fresh Firebase ID tokens to request headers).
 
 ## 6. Comprehensive Testing Suites

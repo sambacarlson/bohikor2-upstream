@@ -6,7 +6,6 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Enums
 CREATE TYPE request_status AS ENUM ('initiated', 'pending', 'success', 'failed');
-CREATE TYPE verification_status AS ENUM ('pending', 'verified', 'failed');
 CREATE TYPE user_status AS ENUM ('active', 'suspended');
 CREATE TYPE invitation_status AS ENUM ('sent', 'accepted', 'expired', 'revoked');
 
@@ -22,9 +21,11 @@ CREATE TABLE admins (
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email TEXT UNIQUE NOT NULL,
+    email_verified BOOLEAN NOT NULL DEFAULT FALSE,
     firebase_uid TEXT UNIQUE NOT NULL,
     full_name TEXT,
-    phone_number TEXT,
+    phone_number TEXT NOT NULL,
+    phone_verified BOOLEAN NOT NULL DEFAULT FALSE,
     status user_status NOT NULL DEFAULT 'active',
     is_terms_accepted BOOLEAN NOT NULL DEFAULT FALSE,
     terms_accepted_at TIMESTAMPTZ,
@@ -46,22 +47,6 @@ CREATE TABLE invitations (
 
 CREATE UNIQUE INDEX idx_one_active_invitation_per_email
 ON invitations (email) WHERE (status IN ('sent', 'accepted'));
-
--- Phone Verifications
-CREATE TABLE phone_verifications (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES users(id),
-    phone_number TEXT NOT NULL,
-    transaction_id TEXT,
-    verification_code CHAR(6),
-    fee_xaf NUMERIC(10, 2) NOT NULL DEFAULT 5.00 CHECK (fee_xaf = 5.00),
-    status verification_status NOT NULL DEFAULT 'pending',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    verified_at TIMESTAMPTZ
-);
-
-CREATE INDEX idx_phone_verifications_user_id ON phone_verifications (user_id);
-CREATE INDEX idx_phone_verifications_status ON phone_verifications (user_id, status);
 
 -- Advance Requests
 CREATE TABLE advance_requests (

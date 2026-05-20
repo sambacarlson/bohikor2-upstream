@@ -23,8 +23,8 @@ Provide employees with fast access to emergency cash before payday while measuri
 
 Can:
 
-- sign up,
-- verify identity,
+- sign up (phone-first authentication),
+- verify email and phone number,
 - accept terms,
 - request advance (only between 15th and end of month in Cameroon time),
 - view request history.
@@ -46,25 +46,22 @@ Can:
 
 Employee receives invitation email. Track invite sent timestamp and recipient email. Expired or revoked invitations can be re-sent.
 
-### 2. Signup
+### 2. Signup (Phone-First Authentication)
 
-Employee signs up via the mobile app using email. Authentication is passwordless via magic link or Email OTP.
+Employee opens the mobile app and enters their email and phone number. The system checks if the email has a pending invitation. If not, the user is blocked with a message to contact their manager.
 
-### 3. Phone Verification (Active Debit Loop)
+If the email is invited, verification proceeds synchronously:
 
-To verify that the employee controls the mobile money wallet, an active withdrawal validation loop is initialized:
+1. **Email verification:** A 6-digit OTP is sent to the email via Resend. User enters the code to prove inbox ownership. State is persisted — if the user closes the app, they can resume.
+2. **Phone verification:** After email is verified, Firebase Phone Auth sends an SMS OTP to the phone number. User enters the code to prove phone ownership. This phone number becomes the user's primary identity for all future logins.
 
-- The user inputs their mobile money phone number.
-- The system triggers a mobile money collection (withdrawal pull request) via Campay for a tiny sum (**5 XAF**). This fee is **non-refundable** — it is a permanent verification charge, clearly communicated to the user in the app.
-- Once the user approves the prompt and authorization succeeds, the operator generates a network transaction receipt containing a reference code.
-- The app prompts the user to enter the last 6 digits of that transaction ID to match cached webhook transaction states, completing active ownership verification.
-- On successful verification, the verified phone number is also stored on the `users` table for faster lookups.
+Both email and phone must be verified before the user can proceed. On success, the user record is created, the invitation is marked as accepted, and the user is redirected to the main screen.
 
-### 4. Terms Acceptance
+**Session management:** Phone number is the primary login credential for returning users. Firebase ID tokens are used for API authentication. Sessions expire after 30 days, requiring re-authentication via phone OTP.
 
 User views explicit terms and gives consent. Track consent version, consent timestamp, and user IP address.
 
-### 5. Request Advance
+### 3. Terms Acceptance
 
 User taps "Request Advance". The system runs eligibility checks:
 
@@ -74,7 +71,7 @@ User taps "Request Advance". The system runs eligibility checks:
 - Check if the global Admin Kill Switch is active. **Kill switch behavior:** Block all **new** requests. In-flight payouts (already in `initiated` or `pending` status) are allowed to complete but are **flagged for manual admin review**.
 - If checks pass, system transitions request status to `initiated` and calls the Campay Payout API.
 
-### 6. Payout Completion
+### 4. Request Advance
 
 The system listens to Campay webhooks or polls for status updates.
 
@@ -83,7 +80,7 @@ The system listens to Campay webhooks or polls for status updates.
 
 **Webhook Authentication:** All incoming Campay webhook payloads **must** be verified using cryptographic signature validation (shared secret / HMAC) before processing. Reject any webhook that fails signature verification. Store the Campay webhook secret in environment variables — never hardcode.
 
-### 7. Feedback Survey
+### 5. Feedback Survey
 
 Immediately after a payout reaches a **final** status (`success` or `failed`), a single-question satisfaction survey is shown to the user. Surveys are not shown for `pending` or `initiated` states.
 
@@ -103,7 +100,7 @@ Track:
 
 ### Event Logs
 
-Track all major events with timestamps: `user_invited`, `otp_sent`, `otp_verified`, `signup_completed`, `request_initiated`, `payout_success`, `payout_failed`, `survey_submitted`, `kill_switch_activated`, `kill_switch_deactivated`, `user_suspended`.
+Track all major events with timestamps: `user_invited`, `email_otp_sent`, `email_otp_verified`, `phone_otp_sent`, `phone_otp_verified`, `signup_completed`, `request_initiated`, `payout_success`, `payout_failed`, `survey_submitted`, `kill_switch_activated`, `kill_switch_deactivated`, `user_suspended`, `user_activated`.
 
 ## Operational Requirements
 

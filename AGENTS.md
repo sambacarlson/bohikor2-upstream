@@ -110,7 +110,7 @@ npm run test          # Jest + RNTL
 | Request window | 15th–last day of month, Africa/Douala time |
 | Daily attempt limit | 1 per day per user (Africa/Douala time) |
 | Monthly success limit | 1 per calendar month per user |
-| Verification fee | 5 XAF, non-refundable |
+| Verification | Firebase Phone OTP (primary identity) + Resend email OTP |
 | Kill switch | Blocks **new** requests; in-flight payouts complete but flagged for review |
 | Survey trigger | On `success` or `failed` status only |
 | Webhook auth | Campay HMAC signature verification required |

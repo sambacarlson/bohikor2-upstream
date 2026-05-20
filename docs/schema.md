@@ -13,7 +13,6 @@ All timestamp columns use `TIMESTAMPTZ` (stored in UTC). Business-logic date bou
 ```mermaid
 erDiagram
     users ||--o{ invitations : "receives"
-    users ||--o{ phone_verifications : "performs"
     users ||--o{ advance_requests : "requests"
     users ||--o{ events : "generates"
     users ||--o{ surveys : "provides"
@@ -30,7 +29,6 @@ erDiagram
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TYPE request_status AS ENUM ('initiated', 'pending', 'success', 'failed');
-CREATE TYPE verification_status AS ENUM ('pending', 'verified', 'failed');
 CREATE TYPE user_status AS ENUM ('active', 'suspended');
 CREATE TYPE invitation_status AS ENUM ('sent', 'accepted', 'expired', 'revoked');
 ```
@@ -54,9 +52,11 @@ CREATE TABLE admins (
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email TEXT UNIQUE NOT NULL,
+    email_verified BOOLEAN NOT NULL DEFAULT FALSE,
     firebase_uid TEXT UNIQUE NOT NULL,
     full_name TEXT,
-    phone_number TEXT,            -- Populated after phone verification succeeds
+    phone_number TEXT NOT NULL,       -- Primary identity, verified via Firebase Phone Auth
+    phone_verified BOOLEAN NOT NULL DEFAULT FALSE,
     status user_status NOT NULL DEFAULT 'active',
     is_terms_accepted BOOLEAN NOT NULL DEFAULT FALSE,
     terms_accepted_at TIMESTAMPTZ,
@@ -85,25 +85,6 @@ CREATE TABLE invitations (
 -- Only one active (non-expired, non-revoked) invitation per email.
 CREATE UNIQUE INDEX idx_one_active_invitation_per_email
 ON invitations (email) WHERE (status IN ('sent', 'accepted'));
-```
-
-#### Phone Verifications
-
-```sql
-CREATE TABLE phone_verifications (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES users(id),
-    phone_number TEXT NOT NULL,
-    transaction_id TEXT,              -- The Campay withdrawal reference
-    verification_code CHAR(6),        -- Last 6 digits to match
-    fee_xaf NUMERIC(10, 2) NOT NULL DEFAULT 5.00 CHECK (fee_xaf = 5.00), -- Non-refundable verification fee
-    status verification_status NOT NULL DEFAULT 'pending',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    verified_at TIMESTAMPTZ
-);
-
-CREATE INDEX idx_phone_verifications_user_id ON phone_verifications (user_id);
-CREATE INDEX idx_phone_verifications_status ON phone_verifications (user_id, status);
 ```
 
 #### Advance Requests
@@ -187,7 +168,7 @@ CREATE TABLE system_config (
 ## 5. Integrity & Cascading Rules
 
 - **Foreign Keys:** `ON DELETE RESTRICT` for users and requests to preserve audit trails.
-- **Strict Checks:** `amount_xaf` is hard-locked to 10000.00; `fee_xaf` is hard-locked to 5.00.
+- **Strict Checks:** `amount_xaf` is hard-locked to 10000.00.
 - **Timestamps:** All tables include `created_at` with `TIMESTAMPTZ` to ensure absolute time tracking across timezones.
 - **`updated_at`:** No auto-update trigger. Go service layer must explicitly set `updated_at = NOW()` on every write.
 
@@ -196,7 +177,7 @@ CREATE TABLE system_config (
 | Question | Resolution |
 | :--- | :--- |
 | **Payday Reset Logic:** If a user gets an advance on Jan 31, can they get another on Feb 15? | **Calendar month.** The "one success per month" rule resets on the 1st of each calendar month. A request on Jan 31 and Feb 15 are in different months and both allowed. Enforced via `idx_one_success_per_month` partial unique index. |
-| **Phone Verification 5 XAF fee:** Permanent charge or refundable hold? | **Non-refundable.** The 5 XAF collection is a permanent verification fee, not a hold. This is clearly communicated to the user in the app. |
+| **Phone Verification Method:** Campay 5 XAF collection or OTP? | **Firebase Phone OTP.** Phone number is the primary identity. Email is verified separately via Resend OTP. Both must be verified before signup completes. No `phone_verifications` table needed for MVP. |
 | **Data Retention:** What happens to user data after the pilot? | **Retain indefinitely.** All data is preserved for audit, compliance, and analysis. No automated deletion schedule is applied post-pilot. |
 
 ## 7. Backup & Recovery Strategy

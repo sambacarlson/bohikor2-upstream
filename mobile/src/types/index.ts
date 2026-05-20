@@ -2,14 +2,14 @@ export type UserStatus = "active" | "suspended";
 
 export type RequestStatus = "initiated" | "pending" | "success" | "failed";
 
-export type VerificationStatus = "pending" | "verified" | "failed";
-
 export interface User {
   id: string;
   email: string;
+  email_verified: boolean;
   firebase_uid: string;
   full_name: string | null;
-  phone_number: string | null;
+  phone_number: string;
+  phone_verified: boolean;
   status: UserStatus;
   is_terms_accepted: boolean;
   terms_accepted_at: string | null;
@@ -29,18 +29,6 @@ export interface AdvanceRequest {
   payout_duration_seconds: number | null;
   created_at: string;
   updated_at: string;
-}
-
-export interface PhoneVerification {
-  id: string;
-  user_id: string;
-  phone_number: string;
-  transaction_id: string | null;
-  verification_code: string | null;
-  fee_xaf: string;
-  status: VerificationStatus;
-  created_at: string;
-  verified_at: string | null;
 }
 
 export interface Event {
