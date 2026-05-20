@@ -9,31 +9,31 @@ import (
 )
 
 type Config struct {
-	Env                     string        `env:"ENV" envDefault:"development"`
-	Port                    int           `env:"PORT" envDefault:"8080"`
-	DatabaseURL             string        `env:"DATABASE_URL" envDefault:"postgres://localhost:5432/bohikor2?sslmode=disable"`
+	Env         string `env:"ENV" envDefault:"development"`
+	Port        int    `env:"PORT" envDefault:"8080"`
+	DatabaseURL string `env:"DATABASE_URL" envDefault:"postgres://localhost:5432/bohikor2?sslmode=disable"`
 
 	// Firebase
-	FirebaseProjectID       string        `env:"FIREBASE_PROJECT_ID" envDefault:""`
-	FirebaseCredentialsJSON string        `env:"FIREBASE_CREDENTIALS_JSON" envDefault:""`
+	FirebaseProjectID       string `env:"FIREBASE_PROJECT_ID" envDefault:""`
+	FirebaseCredentialsJSON string `env:"FIREBASE_CREDENTIALS_JSON" envDefault:""`
 
 	// Campay
-	CampayAPIUsername       string        `env:"CAMPAY_API_USERNAME" envDefault:""`
-	CampayAPIPassword       string        `env:"CAMPAY_API_PASSWORD" envDefault:""`
-	CampayWebhookSecret     string        `env:"CAMPAY_WEBHOOK_SECRET" envDefault:""`
-	CampayBaseURL           string        `env:"CAMPAY_BASE_URL" envDefault:"https://demo.campay.net/api"`
+	CampayAPIUsername   string `env:"CAMPAY_API_USERNAME" envDefault:""`
+	CampayAPIPassword   string `env:"CAMPAY_API_PASSWORD" envDefault:""`
+	CampayWebhookSecret string `env:"CAMPAY_WEBHOOK_SECRET" envDefault:""`
+	CampayBaseURL       string `env:"CAMPAY_BASE_URL" envDefault:"https://demo.campay.net/api"`
 
 	// Resend
-	ResendAPIKey            string        `env:"RESEND_API_KEY" envDefault:""`
-	FromEmail               string        `env:"FROM_EMAIL" envDefault:"noreply@bohikor2.com"`
+	ResendAPIKey string `env:"RESEND_API_KEY" envDefault:""`
+	FromEmail    string `env:"FROM_EMAIL" envDefault:"noreply@bohikor2.com"`
 
 	// Timezone
-	Timezone                string        `env:"TIMEZONE" envDefault:"Africa/Douala"`
+	Timezone string `env:"TIMEZONE" envDefault:"Africa/Douala"`
 
 	// Server timeouts
-	ReadTimeout             time.Duration `env:"READ_TIMEOUT" envDefault:"15s"`
-	WriteTimeout            time.Duration `env:"WRITE_TIMEOUT" envDefault:"15s"`
-	IdleTimeout             time.Duration `env:"IDLE_TIMEOUT" envDefault:"60s"`
+	ReadTimeout  time.Duration `env:"READ_TIMEOUT" envDefault:"15s"`
+	WriteTimeout time.Duration `env:"WRITE_TIMEOUT" envDefault:"15s"`
+	IdleTimeout  time.Duration `env:"IDLE_TIMEOUT" envDefault:"60s"`
 }
 
 func Load() (*Config, error) {

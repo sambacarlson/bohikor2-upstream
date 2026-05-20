@@ -32,7 +32,7 @@ generate:
 
 # Run migrations up
 migrate-up:
-	@set -a; . .env; set +a; \
+	@DATABASE_URL=$$(grep '^DATABASE_URL=' .env | head -1 | cut -d'=' -f2-); \
 	if [ -z "$$DATABASE_URL" ]; then \
 		echo "ERROR: DATABASE_URL is required"; \
 		exit 1; \
@@ -41,7 +41,7 @@ migrate-up:
 
 # Run migrations down (rollback last migration)
 migrate-down:
-	@set -a; . .env; set +a; \
+	@DATABASE_URL=$$(grep '^DATABASE_URL=' .env | head -1 | cut -d'=' -f2-); \
 	if [ -z "$$DATABASE_URL" ]; then \
 		echo "ERROR: DATABASE_URL is required"; \
 		exit 1; \
@@ -50,7 +50,7 @@ migrate-down:
 
 # Run migrations with force (to a specific version)
 migrate-force:
-	@set -a; . .env; set +a; \
+	@DATABASE_URL=$$(grep '^DATABASE_URL=' .env | head -1 | cut -d'=' -f2-); \
 	if [ -z "$$DATABASE_URL" ]; then \
 		echo "ERROR: DATABASE_URL is required"; \
 		exit 1; \

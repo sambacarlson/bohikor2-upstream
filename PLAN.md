@@ -4,8 +4,8 @@
 
 | Epic | Status | Priority | Owner |
 | :--- | :---: | :---: | :--- |
-| **0. Foundation & Data Contract** | 🏗️ | P0 | Backend |
-| **1. Identity & Auth (Firebase)** | ⚪ | P0 | Fullstack |
+| **0. Foundation & Data Contract** | ✅ | P0 | Backend |
+| **1. Identity & Auth (Firebase)** | 🏗️ | P0 | Fullstack |
 | **2. Mobile: Onboarding & Phone Verification** | ⚪ | P1 | Mobile |
 | **3. Backend: Eligibility & Campay Payouts** | ⚪ | P0 | Backend |
 | **4. Admin: Monitoring & Kill Switch** | 🏗️ | P1 | Admin |
@@ -32,8 +32,15 @@
 
 ### 1. Identity & Auth (Firebase)
 - [ ] Configure Firebase Project (Auth & Admin SDK).
+- [x] Backend: Firebase Admin SDK integration (`internal/firebaseapp/app.go`).
+- [x] Backend: Resend email client (`internal/email/email.go`).
+- [x] Backend: Firebase auth middleware with 30-day session expiry (`internal/middleware/auth.go`).
+- [x] Backend: Role-check middleware — RequireAdmin, RequireActiveUser (`internal/middleware/role.go`).
+- [x] Backend: sqlc queries for users, admins, invitations, events (`db/queries/`).
+- [x] Backend: Server routes — `/health`, `/api/auth/verify`, `/api/admin/me`, `/api/users/me`.
+- [x] Backend: 21 unit tests passing, 0 lint issues.
 - [ ] Implement Admin Invite flow (Backend + Email).
-- [ ] Implement Employee Magic Link/OTP flow (Mobile).
+- [ ] Implement Employee phone-first signup flow (Mobile).
 
 ### 2. Mobile: Onboarding & Phone-First Auth
 - [ ] Signup screen (email + phone input, invitation check).
@@ -77,6 +84,7 @@
 | 2026-05-19 | ✅ Design Decisions | Calendar-month reset (Jan 31 + Feb 15 = both allowed). Phone-first auth via Firebase Phone OTP + Resend email OTP. Data retained indefinitely post-pilot. |
 | 2026-05-19 | 🏗️ Backend Init | Go backend scaffolded: Gin server with graceful shutdown, `slog` structured logging, request ID middleware, pgxpool connection, `caarlos0/env` + `godotenv` config loading. Makefile (run/build/docker-build/lint/test/generate/migrate-up/migrate-down/migrate-force/migrate-create/clean/install-tools). Dockerfile (multi-stage Go 1.26-alpine → alpine). Migrations: `000001_schema.up/down.sql` (full DDL), `000002_seed_kill_switch.up/down.sql`. sqlc config with pgx/v5 + uuid/time/decimal overrides. `.golangci.yml` with errcheck/govet/bodyclose/noctx. `.env` + `.env.example` with Neon/local DB placeholders. Health endpoint at `GET /health`. |
 | 2026-05-19 | 🏗️ Admin Init | Admin dashboard scaffolded: Next.js 16 + shadcn/ui (radix) + Tailwind v4 + TanStack React Query + Firebase auth + Axios with token interceptor. Pages: login (email/password), dashboard overview (stats cards), users (table + suspend/activate), requests (table + status filter), kill switch (toggle + status), events (log table). Auth guard protects all dashboard routes. TypeScript types match backend schema. `.env.local` with Firebase + API placeholders. `npm run lint` and `npm run typecheck` pass clean. Auth flow spec in `docs/features/auth.md`. |
+| 2026-05-20 | ✅ Backend Increment 1 | Auth foundation complete: Firebase Admin SDK, Resend client, auth middleware (30-day session expiry), role middleware (RequireAdmin/RequireActiveUser), sqlc queries (users/admins/invitations/events), server routes wired. 21 tests pass, 0 lint issues. Server starts and /health returns 200. |
 | 2026-05-19 | 🏗️ Mobile Init | Mobile app scaffolded: Expo SDK 54 + NativeWind v5 (Tailwind v4) + Expo Router + Firebase Auth + TanStack Query + Axios. Route groups: `(auth)` (login, signup, verify-email, verify-phone) and `(app)` with bottom tabs (home, history, profile) + stack screens (request-advance, terms, survey). TypeScript types matching backend schema. ESLint + Jest config. `npm run lint` and `npm run typecheck` pass clean. |
 
 ---

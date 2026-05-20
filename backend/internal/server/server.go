@@ -12,16 +12,23 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	db "github.com/Iknite-Space/bohikor2/db/sqlc"
 	"github.com/Iknite-Space/bohikor2/internal/config"
+	"github.com/Iknite-Space/bohikor2/internal/email"
+	"github.com/Iknite-Space/bohikor2/internal/firebaseapp"
 	"github.com/Iknite-Space/bohikor2/internal/middleware"
 	"github.com/Iknite-Space/bohikor2/internal/repository"
 )
 
 type Server struct {
-	cfg    *config.Config
-	router *gin.Engine
-	http   *http.Server
-	db     *pgxpool.Pool
+	cfg      *config.Config
+	router   *gin.Engine
+	http     *http.Server
+	pool     *pgxpool.Pool
+	queries  *db.Queries
+	firebase *firebaseapp.Client
+	email    *email.Client
 }
 
 func New(cfg *config.Config) (*Server, error) {
@@ -34,26 +41,61 @@ func New(cfg *config.Config) (*Server, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	db, err := repository.NewDB(ctx, cfg.DatabaseURL)
+	pool, err := repository.NewDB(ctx, cfg.DatabaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("initialize database: %w", err)
 	}
+
+	fb, err := firebaseapp.NewClient(ctx, cfg.FirebaseCredentialsJSON, cfg.FirebaseProjectID)
+	if err != nil {
+		pool.Close()
+		return nil, fmt.Errorf("initialize firebase: %w", err)
+	}
+
+	emailClient := email.NewClient(cfg.ResendAPIKey, cfg.FromEmail)
+
+	queries := db.New(pool)
 
 	router := gin.New()
 	router.Use(gin.Recovery())
 	router.Use(middleware.Logger())
 	router.Use(middleware.RequestID())
 
-	// Health check
+	authMiddleware := middleware.FirebaseAuth(fb.Auth)
+
+	// Public routes
 	router.GET("/health", healthHandler)
 
-	// TODO: Register routes here as they are implemented
-	// registerRoutes(router, db, cfg)
+	// Auth routes (protected by Firebase auth middleware)
+	authGroup := router.Group("/api/auth")
+	authGroup.Use(authMiddleware)
+	{
+		authGroup.POST("/verify", handleVerify(queries))
+	}
+
+	// Admin routes (protected by Firebase auth + admin role)
+	adminGroup := router.Group("/api/admin")
+	adminGroup.Use(authMiddleware)
+	adminGroup.Use(middleware.RequireAdmin(queries))
+	{
+		adminGroup.GET("/me", handleAdminMe(queries))
+	}
+
+	// User routes (protected by Firebase auth + active user check)
+	userGroup := router.Group("/api/users")
+	userGroup.Use(authMiddleware)
+	userGroup.Use(middleware.RequireActiveUser(queries))
+	{
+		userGroup.GET("/me", handleUserMe(queries))
+	}
 
 	s := &Server{
-		cfg:    cfg,
-		router: router,
-		db:     db,
+		cfg:      cfg,
+		router:   router,
+		pool:     pool,
+		queries:  queries,
+		firebase: fb,
+		email:    emailClient,
 	}
 
 	s.http = &http.Server{
@@ -68,7 +110,6 @@ func New(cfg *config.Config) (*Server, error) {
 }
 
 func (s *Server) Start() error {
-	// Graceful shutdown
 	go func() {
 		sigCh := make(chan os.Signal, 1)
 		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
@@ -82,7 +123,7 @@ func (s *Server) Start() error {
 			slog.Error("server forced to shutdown", "error", err)
 		}
 
-		s.db.Close()
+		s.pool.Close()
 		slog.Info("database connection pool closed")
 	}()
 

@@ -1,3 +1,5 @@
+version: "2"
+
 run:
   timeout: 5m
   tests: true
@@ -5,21 +7,22 @@ run:
 linters:
   enable:
     - errcheck
-    - gosimple
     - govet
     - ineffassign
     - staticcheck
     - unused
-    - gofmt
-    - goimports
     - misspell
     - unconvert
     - bodyclose
     - noctx
     - prealloc
-    - exportloopref
 
-linters-settings:
+formatters:
+  enable:
+    - gofmt
+    - goimports
+
+settings:
   errcheck:
     check-type-assertions: true
     check-blank: false
@@ -30,7 +33,8 @@ linters-settings:
   gofmt:
     simplify: true
   goimports:
-    local-prefixes: github.com/Iknite-Space/bohikor2
+    local-prefixes:
+      - github.com/Iknite-Space/bohikor2
 
 issues:
   exclude-use-default: false
