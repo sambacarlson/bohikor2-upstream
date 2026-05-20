@@ -66,14 +66,14 @@ export default function UsersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data?.data.length === 0 ? (
+            {data?.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center text-muted-foreground">
                   No users found
                 </TableCell>
               </TableRow>
             ) : (
-              data?.data.map((user) => (
+              data?.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">{user.email}</TableCell>
                   <TableCell>{user.full_name || "—"}</TableCell>

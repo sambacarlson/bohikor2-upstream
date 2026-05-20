@@ -1,15 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { User, PaginatedResponse } from "@/types";
+import type { User } from "@/types";
 
 export function useUsers(page = 1, perPage = 20) {
   return useQuery({
     queryKey: ["users", page, perPage],
     queryFn: async () => {
-      const { data } = await api.get<PaginatedResponse<User>>("/api/users", {
+      const { data } = await api.get<{ data: User[] }>("/api/admin/users", {
         params: { page, per_page: perPage },
       });
-      return data;
+      return data.data;
     },
   });
 }
@@ -19,7 +19,7 @@ export function useSuspendUser() {
 
   return useMutation({
     mutationFn: async (userId: string) => {
-      const { data } = await api.put<User>(`/api/users/${userId}/suspend`);
+      const { data } = await api.put<User>(`/api/admin/users/${userId}/suspend`);
       return data;
     },
     onSuccess: () => {
@@ -33,7 +33,7 @@ export function useActivateUser() {
 
   return useMutation({
     mutationFn: async (userId: string) => {
-      const { data } = await api.put<User>(`/api/users/${userId}/activate`);
+      const { data } = await api.put<User>(`/api/admin/users/${userId}/activate`);
       return data;
     },
     onSuccess: () => {
