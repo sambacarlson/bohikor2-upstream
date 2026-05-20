@@ -26,4 +26,6 @@ coverage.out
 
 # Vendor (if used)
 vendor/
-server
+
+# Server binary
+/server
