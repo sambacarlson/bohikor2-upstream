@@ -43,7 +43,7 @@
 
 ## 5. Mobile Application Stack (React Native & Expo)
 
-- **Styling & Presentation Layer:** `NativeWind v5` (Tailwind CSS v4 native mapping via `react-native-css-interop`; CSS-first `@import "tailwindcss"` configuration).
+- **Styling & Presentation Layer:** `NativeWind v4` (Tailwind CSS v3 with `nativewind/babel` + `nativewind/metro`; `tailwind.config.js` using `nativewind/preset`).
 - **State Management & Network Sync:** `TanStack React Query` (Shared query paradigms matching the Admin frontend).
 - **Navigation Architecture:** `Expo Router` (File-based routing built on top of React Navigation).
 - **Authentication Infrastructure:** `firebase/auth` (Client-side user registration, passwordless links/email OTP, and token refresh handling).
