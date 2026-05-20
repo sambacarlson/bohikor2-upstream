@@ -37,9 +37,10 @@
 - [x] Backend: Firebase auth middleware with 30-day session expiry (`internal/middleware/auth.go`).
 - [x] Backend: Role-check middleware — RequireAdmin, RequireActiveUser (`internal/middleware/role.go`).
 - [x] Backend: sqlc queries for users, admins, invitations, events (`db/queries/`).
-- [x] Backend: Server routes — `/health`, `/api/auth/verify`, `/api/admin/me`, `/api/users/me`, `/api/admin/invite`.
+- [x] Backend: Server routes — `/health`, `/api/auth/verify`, `/api/admin/me`, `/api/users/me`, `/api/admin/invite`, `/api/admin/invitations`.
 - [x] Backend: 34 unit tests passing, 0 lint issues.
 - [x] Implement Admin Invite flow (Backend + Email) — `POST /api/admin/invite`, invitation email via Resend, duplicate detection.
+- [x] Admin Dashboard: Invite page (`/invite`) — send invitations, view invitation list, manual refresh. Jest + RTL test infrastructure added. 7 RTL tests passing.
 - [ ] Implement Employee phone-first signup flow (Mobile).
 
 ### 2. Mobile: Onboarding & Phone-First Auth
@@ -86,6 +87,7 @@
 | 2026-05-19 | 🏗️ Admin Init | Admin dashboard scaffolded: Next.js 16 + shadcn/ui (radix) + Tailwind v4 + TanStack React Query + Firebase auth + Axios with token interceptor. Pages: login (email/password), dashboard overview (stats cards), users (table + suspend/activate), requests (table + status filter), kill switch (toggle + status), events (log table). Auth guard protects all dashboard routes. TypeScript types match backend schema. `.env.local` with Firebase + API placeholders. `npm run lint` and `npm run typecheck` pass clean. Auth flow spec in `docs/features/auth.md`. |
 | 2026-05-20 | ✅ Backend Increment 1 | Auth foundation complete: Firebase Admin SDK, Resend client, auth middleware (30-day session expiry), role middleware (RequireAdmin/RequireActiveUser), sqlc queries (users/admins/invitations/events), server routes wired. 21 tests pass, 0 lint issues. Server starts and /health returns 200. |
 | 2026-05-20 | ✅ Admin Invite Flow | `POST /api/admin/invite` endpoint: validates email, checks for active invitations (sent/accepted), creates invitation record, sends email via Resend. Service layer with mocked store + email sender. 13 new tests (email, service, handler, server integration). 34 total tests pass, 0 lint issues. |
+| 2026-05-20 | ✅ Admin Invite UI + Tests | Admin dashboard invite page (`/invite`): email form, send button, invitations table with status badges, manual refresh. Jest + RTL test infrastructure (jest.config.js, jest.setup.ts, 7 passing tests). `GET /api/admin/invitations` backend endpoint added. Sidebar updated with Invite link. Admin types overhauled to match backend sqlc models. |
 | 2026-05-19 | 🏗️ Mobile Init | Mobile app scaffolded: Expo SDK 54 + NativeWind v5 (Tailwind v4) + Expo Router + Firebase Auth + TanStack Query + Axios. Route groups: `(auth)` (login, signup, verify-email, verify-phone) and `(app)` with bottom tabs (home, history, profile) + stack screens (request-advance, terms, survey). TypeScript types matching backend schema. ESLint + Jest config. `npm run lint` and `npm run typecheck` pass clean. |
 
 ---

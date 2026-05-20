@@ -19,6 +19,14 @@ export interface User {
   updated_at: string;
 }
 
+export interface Invitation {
+  id: string;
+  email: string;
+  status: InvitationStatus;
+  sent_at: string;
+  accepted_at: string | null;
+}
+
 export interface Admin {
   id: string;
   email: string;

@@ -85,6 +85,7 @@ func New(cfg *config.Config) (*Server, error) {
 	{
 		adminGroup.GET("/me", handleAdminMe(queries))
 		adminGroup.POST("/invite", handler.HandleInvite(inviteService))
+		adminGroup.GET("/invitations", handler.HandleListInvitations(queries))
 	}
 
 	// User routes (protected by Firebase auth + active user check)
