@@ -25,6 +25,29 @@ func NewClient(apiKey, fromEmail string) *Client {
 	}
 }
 
+func (c *Client) SendInvitation(ctx context.Context, email string) error {
+	if email == "" {
+		return fmt.Errorf("email is required")
+	}
+	if !emailRegex.MatchString(email) {
+		return fmt.Errorf("invalid email format: %s", email)
+	}
+
+	params := &resend.SendEmailRequest{
+		From:    c.fromEmail,
+		To:      []string{email},
+		Subject: "You've been invited to Bohikor2 Admin",
+		Text:    "You have been invited to join the Bohikor2 Admin dashboard. Please sign up using your work email to get started.",
+	}
+
+	_, err := c.sdk.Emails.SendWithContext(ctx, params)
+	if err != nil {
+		return fmt.Errorf("send invitation email via Resend: %w", err)
+	}
+
+	return nil
+}
+
 func (c *Client) SendOTP(ctx context.Context, email, code string) error {
 	if email == "" {
 		return fmt.Errorf("email is required")

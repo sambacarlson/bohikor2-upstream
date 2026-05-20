@@ -17,8 +17,10 @@ import (
 	"github.com/Iknite-Space/bohikor2/internal/config"
 	"github.com/Iknite-Space/bohikor2/internal/email"
 	"github.com/Iknite-Space/bohikor2/internal/firebaseapp"
+	"github.com/Iknite-Space/bohikor2/internal/handler"
 	"github.com/Iknite-Space/bohikor2/internal/middleware"
 	"github.com/Iknite-Space/bohikor2/internal/repository"
+	"github.com/Iknite-Space/bohikor2/internal/service"
 )
 
 type Server struct {
@@ -56,6 +58,9 @@ func New(cfg *config.Config) (*Server, error) {
 
 	queries := db.New(pool)
 
+	inviteStore := service.NewRealInviteStore(queries)
+	inviteService := service.NewInviteService(inviteStore, emailClient)
+
 	router := gin.New()
 	router.Use(gin.Recovery())
 	router.Use(middleware.Logger())
@@ -79,6 +84,7 @@ func New(cfg *config.Config) (*Server, error) {
 	adminGroup.Use(middleware.RequireAdmin(queries))
 	{
 		adminGroup.GET("/me", handleAdminMe(queries))
+		adminGroup.POST("/invite", handler.HandleInvite(inviteService))
 	}
 
 	// User routes (protected by Firebase auth + active user check)
