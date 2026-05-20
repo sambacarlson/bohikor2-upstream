@@ -30,7 +30,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TYPE request_status AS ENUM ('initiated', 'pending', 'success', 'failed');
 CREATE TYPE user_status AS ENUM ('active', 'suspended');
-CREATE TYPE invitation_status AS ENUM ('sent', 'accepted', 'expired', 'revoked');
+CREATE TYPE invitation_status AS ENUM ('pending', 'sent', 'accepted', 'expired', 'revoked', 'failed');
 ```
 
 ### Tables

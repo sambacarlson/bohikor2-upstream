@@ -37,10 +37,10 @@
 - [x] Backend: Firebase auth middleware with 30-day session expiry (`internal/middleware/auth.go`).
 - [x] Backend: Role-check middleware — RequireAdmin, RequireActiveUser (`internal/middleware/role.go`).
 - [x] Backend: sqlc queries for users, admins, invitations, events (`db/queries/`).
-- [x] Backend: Server routes — `/health`, `/api/auth/verify`, `/api/admin/me`, `/api/users/me`, `/api/admin/invite`, `/api/admin/invitations`.
-- [x] Backend: 34 unit tests passing, 0 lint issues.
-- [x] Implement Admin Invite flow (Backend + Email) — `POST /api/admin/invite`, invitation email via Resend, duplicate detection.
-- [x] Admin Dashboard: Invite page (`/invite`) — send invitations, view invitation list, manual refresh. Jest + RTL test infrastructure added. 7 RTL tests passing.
+- [x] Backend: Server routes — `/health`, `/api/auth/verify`, `/api/admin/me`, `/api/users/me`, `/api/admin/invite`, `/api/admin/invitations`, `/api/admin/users`.
+- [x] Backend: 41 unit tests passing, 0 lint issues.
+- [x] Implement Admin Invite flow (Backend + Email) — `POST /api/admin/invite`, invitation email via Resend, duplicate detection. Invitations created as `pending`, updated to `sent` on email success or `failed` on email error.
+- [x] Admin Dashboard: Invite page (`/invite`) — send invitations, view invitation list with status badges (pending/sent/accepted/failed), manual refresh. Jest + RTL test infrastructure added. 7 RTL tests passing.
 - [ ] Implement Employee phone-first signup flow (Mobile).
 
 ### 2. Mobile: Onboarding & Phone-First Auth
@@ -88,6 +88,7 @@
 | 2026-05-20 | ✅ Backend Increment 1 | Auth foundation complete: Firebase Admin SDK, Resend client, auth middleware (30-day session expiry), role middleware (RequireAdmin/RequireActiveUser), sqlc queries (users/admins/invitations/events), server routes wired. 21 tests pass, 0 lint issues. Server starts and /health returns 200. |
 | 2026-05-20 | ✅ Admin Invite Flow | `POST /api/admin/invite` endpoint: validates email, checks for active invitations (sent/accepted), creates invitation record, sends email via Resend. Service layer with mocked store + email sender. 13 new tests (email, service, handler, server integration). 34 total tests pass, 0 lint issues. |
 | 2026-05-20 | ✅ Admin Invite UI + Tests | Admin dashboard invite page (`/invite`): email form, send button, invitations table with status badges, manual refresh. Jest + RTL test infrastructure (jest.config.js, jest.setup.ts, 7 passing tests). `GET /api/admin/invitations` backend endpoint added. Sidebar updated with Invite link. Admin types overhauled to match backend sqlc models. |
+| 2026-05-20 | ✅ Invitation Status Flow | Invitations now created as `pending`, updated to `sent` on Resend success or `failed` on error. New enum values: `pending`, `failed`. `GET /api/admin/users` endpoint added with pagination. Admin users hook fixed to call `/api/admin/users`. Firebase UID string handling fixed (no longer parsed as UUID). 41 total backend tests pass, 0 lint issues. |
 | 2026-05-19 | 🏗️ Mobile Init | Mobile app scaffolded: Expo SDK 54 + NativeWind v5 (Tailwind v4) + Expo Router + Firebase Auth + TanStack Query + Axios. Route groups: `(auth)` (login, signup, verify-email, verify-phone) and `(app)` with bottom tabs (home, history, profile) + stack screens (request-advance, terms, survey). TypeScript types matching backend schema. ESLint + Jest config. `npm run lint` and `npm run typecheck` pass clean. |
 
 ---

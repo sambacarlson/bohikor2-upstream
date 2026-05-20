@@ -1,6 +1,6 @@
 export type UserStatus = "active" | "suspended";
 export type RequestStatus = "initiated" | "pending" | "success" | "failed";
-export type InvitationStatus = "sent" | "accepted" | "expired" | "revoked";
+export type InvitationStatus = "pending" | "sent" | "accepted" | "expired" | "revoked" | "failed";
 
 export interface User {
   id: string;

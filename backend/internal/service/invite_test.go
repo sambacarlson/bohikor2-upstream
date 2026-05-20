@@ -16,9 +16,13 @@ var errTestNotFound = errors.New("not found")
 var errTestSendFailed = errors.New("send failed")
 
 type mockStore struct {
-	invitation *db.Invitation
-	getErr     error
-	createErr  error
+	invitation    *db.Invitation
+	getErr        error
+	createErr     error
+	updateErr     error
+	updatedID     *pgtype.UUID
+	updatedStatus *db.InvitationStatus
+	createdEmail  string
 }
 
 func (m *mockStore) GetInvitationByEmail(ctx context.Context, email string) (db.Invitation, error) {
@@ -35,12 +39,27 @@ func (m *mockStore) CreateInvitation(ctx context.Context, email string, invitedB
 	if m.createErr != nil {
 		return db.Invitation{}, m.createErr
 	}
+	m.createdEmail = email
 	return db.Invitation{
 		ID:        uuid.New(),
 		Email:     email,
-		Status:    db.InvitationStatusSent,
+		Status:    db.InvitationStatusPending,
 		InvitedBy: invitedBy,
 		SentAt:    time.Now().UTC(),
+	}, nil
+}
+
+func (m *mockStore) UpdateInvitationStatus(ctx context.Context, status db.InvitationStatus, id pgtype.UUID) (db.Invitation, error) {
+	if m.updateErr != nil {
+		return db.Invitation{}, m.updateErr
+	}
+	m.updatedID = &id
+	m.updatedStatus = &status
+	uid := uuid.UUID(id.Bytes)
+	return db.Invitation{
+		ID:     uid,
+		Email:  m.createdEmail,
+		Status: status,
 	}, nil
 }
 
@@ -91,6 +110,9 @@ func TestInvite_HappyPath(t *testing.T) {
 	}
 	if result.Invitation.Status != db.InvitationStatusSent {
 		t.Fatalf("expected status sent, got %s", result.Invitation.Status)
+	}
+	if store.updatedStatus == nil || *store.updatedStatus != db.InvitationStatusSent {
+		t.Fatal("expected status to be updated to sent")
 	}
 }
 
@@ -169,6 +191,9 @@ func TestInvite_EmailSendFails(t *testing.T) {
 	_, err := svc.Invite(context.Background(), "fail@example.com", "firebase-uid-123")
 	if err == nil {
 		t.Fatal("expected error when email send fails")
+	}
+	if store.updatedStatus == nil || *store.updatedStatus != db.InvitationStatusFailed {
+		t.Fatal("expected status to be updated to failed")
 	}
 }
 

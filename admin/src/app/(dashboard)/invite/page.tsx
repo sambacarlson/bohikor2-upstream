@@ -152,14 +152,18 @@ export default function InvitePage() {
                                 ? "default"
                                 : invitation.status === "sent"
                                   ? "secondary"
-                                  : "destructive"
+                                  : invitation.status === "pending"
+                                    ? "outline"
+                                    : "destructive"
                             }
                           >
                             {invitation.status}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {new Date(invitation.sent_at).toLocaleDateString()}
+                          {invitation.sent_at
+                            ? new Date(invitation.sent_at).toLocaleDateString()
+                            : "—"}
                         </TableCell>
                         <TableCell>
                           {invitation.accepted_at

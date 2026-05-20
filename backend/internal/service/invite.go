@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	db "github.com/Iknite-Space/bohikor2/db/sqlc"
@@ -16,6 +17,7 @@ var ErrActiveInvitationExists = errors.New("an active invitation already exists 
 type InviteStore interface {
 	GetInvitationByEmail(ctx context.Context, email string) (db.Invitation, error)
 	CreateInvitation(ctx context.Context, email string, invitedBy pgtype.UUID) (db.Invitation, error)
+	UpdateInvitationStatus(ctx context.Context, status db.InvitationStatus, id pgtype.UUID) (db.Invitation, error)
 }
 
 type AdminQuerier interface {
@@ -65,10 +67,18 @@ func (s *InviteService) Invite(ctx context.Context, email string, invitedByFireb
 	}
 
 	if err := s.email.SendInvitation(ctx, email); err != nil {
+		id := pgtype.UUID{Bytes: invitation.ID, Valid: true}
+		_, _ = s.store.UpdateInvitationStatus(ctx, db.InvitationStatusFailed, id)
 		return nil, fmt.Errorf("send invitation email: %w", err)
 	}
 
-	return &InviteResult{Invitation: invitation}, nil
+	id := pgtype.UUID{Bytes: invitation.ID, Valid: true}
+	updated, err := s.store.UpdateInvitationStatus(ctx, db.InvitationStatusSent, id)
+	if err != nil {
+		return nil, fmt.Errorf("update invitation status to sent: %w", err)
+	}
+
+	return &InviteResult{Invitation: updated}, nil
 }
 
 type RealInviteStore struct {
@@ -86,8 +96,14 @@ func (s *RealInviteStore) GetInvitationByEmail(ctx context.Context, email string
 func (s *RealInviteStore) CreateInvitation(ctx context.Context, email string, invitedBy pgtype.UUID) (db.Invitation, error) {
 	return s.queries.CreateInvitation(ctx, db.CreateInvitationParams{
 		Email:     email,
-		Status:    db.InvitationStatusSent,
 		InvitedBy: invitedBy,
 		SentAt:    time.Now().UTC(),
+	})
+}
+
+func (s *RealInviteStore) UpdateInvitationStatus(ctx context.Context, status db.InvitationStatus, id pgtype.UUID) (db.Invitation, error) {
+	return s.queries.UpdateInvitationStatus(ctx, db.UpdateInvitationStatusParams{
+		Status: status,
+		ID:     uuid.UUID(id.Bytes),
 	})
 }

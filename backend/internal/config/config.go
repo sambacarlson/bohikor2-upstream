@@ -25,7 +25,7 @@ type Config struct {
 
 	// Resend
 	ResendAPIKey string `env:"RESEND_API_KEY" envDefault:""`
-	FromEmail    string `env:"FROM_EMAIL" envDefault:"noreply@bohikor2.com"`
+	FromEmail    string `env:"FROM_EMAIL" envDefault:"onboarding@resend.dev"`
 
 	// Timezone
 	Timezone string `env:"TIMEZONE" envDefault:"Africa/Douala"`

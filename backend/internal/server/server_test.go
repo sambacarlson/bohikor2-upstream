@@ -202,10 +202,12 @@ func TestUserMeEndpoint_ActiveUser(t *testing.T) {
 }
 
 type mockInviteStore struct {
-	email      string
-	invitation *db.Invitation
-	getErr     error
-	createErr  error
+	email        string
+	invitation   *db.Invitation
+	getErr       error
+	createErr    error
+	updateErr    error
+	createdEmail string
 }
 
 func (m *mockInviteStore) GetInvitationByEmail(ctx context.Context, email string) (db.Invitation, error) {
@@ -222,6 +224,7 @@ func (m *mockInviteStore) CreateInvitation(ctx context.Context, email string, in
 	if m.createErr != nil {
 		return db.Invitation{}, m.createErr
 	}
+	m.createdEmail = email
 	if m.invitation != nil {
 		return *m.invitation, nil
 	}
@@ -229,6 +232,18 @@ func (m *mockInviteStore) CreateInvitation(ctx context.Context, email string, in
 		ID:     uuid.New(),
 		Email:  email,
 		Status: db.InvitationStatusSent,
+		SentAt: time.Now().UTC(),
+	}, nil
+}
+
+func (m *mockInviteStore) UpdateInvitationStatus(ctx context.Context, status db.InvitationStatus, id pgtype.UUID) (db.Invitation, error) {
+	if m.updateErr != nil {
+		return db.Invitation{}, m.updateErr
+	}
+	return db.Invitation{
+		ID:     uuid.New(),
+		Email:  m.createdEmail,
+		Status: status,
 		SentAt: time.Now().UTC(),
 	}, nil
 }

@@ -1,0 +1,3 @@
+-- Removing enum values is not supported in PostgreSQL.
+-- This migration is intentionally left empty for rollback safety.
+-- To fully revert, the enum type would need to be recreated.
