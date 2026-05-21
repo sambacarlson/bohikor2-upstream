@@ -1,10 +1,8 @@
-# Data Contract & Schema — Epic 1: Authentication
-
-This document defines the canonical database schema for the current implementation scope (authentication only). Tables for salary advances, Campay payouts, surveys, and the kill switch will be added in future epics.
+# Data Contract & Schema
 
 ## Timezone Convention
 
-All timestamp columns use `TIMESTAMPTZ` (stored in UTC). Business-logic date boundaries must be evaluated in `Africa/Douala` timezone (WAT, UTC+1).
+All timestamps use `TIMESTAMPTZ` (stored in UTC). Business-logic date boundaries evaluated in `Africa/Douala` (WAT, UTC+1).
 
 ## SQL DDL (PostgreSQL 17)
 
@@ -19,6 +17,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 ```sql
 CREATE TYPE user_status AS ENUM ('active', 'suspended');
 CREATE TYPE invitation_status AS ENUM ('pending', 'sent', 'accepted', 'revoked', 'failed');
+CREATE TYPE request_status AS ENUM ('initiated', 'pending', 'success', 'failed');
 ```
 
 ### Admins
@@ -87,8 +86,6 @@ CREATE INDEX idx_email_otps_email ON email_otps (email);
 CREATE INDEX idx_email_otps_expires_at ON email_otps (expires_at);
 ```
 
-OTP records are consumed (deleted) on successful verification. Expired records should be cleaned up periodically.
-
 ### Events
 
 ```sql
@@ -108,9 +105,32 @@ CREATE INDEX idx_events_created_at ON events (created_at);
 
 Auth event types: `user_invited`, `email_otp_sent`, `email_otp_verified`, `phone_otp_verified`, `signup_completed`, `user_suspended`, `user_activated`.
 
+### Advance Requests
+
+```sql
+CREATE TABLE advance_requests (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id),
+    amount_xaf NUMERIC(10, 2) NOT NULL DEFAULT 10000.00 CHECK (amount_xaf = 10000.00),
+    status request_status NOT NULL DEFAULT 'initiated',
+    campay_payout_ref TEXT UNIQUE,
+    failure_reason TEXT,
+    payout_duration_seconds INTEGER,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_advance_requests_user_id ON advance_requests (user_id);
+```
+
+- `status` flow: `initiated` → `pending` → `success` or `failed`
+- `campay_payout_ref` — Campay's transfer reference, unique
+- `payout_duration_seconds` — time from `initiated` to final status
+- Amount is hard-locked to 10000.00 via CHECK constraint
+
 ## Integrity Rules
 
-- **Foreign Keys:** `ON DELETE RESTRICT` for users and admins to preserve audit trails.
+- **Foreign Keys:** `ON DELETE RESTRICT` to preserve audit trails.
 - **IDs:** UUIDs via `uuid_generate_v4()`.
 - **Timestamps:** All `TIMESTAMPTZ`. No auto-update triggers; application layer sets `updated_at`.
 
@@ -118,6 +138,7 @@ Auth event types: `user_invited`, `email_otp_sent`, `email_otp_verified`, `phone
 
 | Question | Resolution |
 | :--- | :--- |
-| **Invitation expiry** | No automatic expiry in MVP. Invitations remain valid until accepted or revoked. The `revoked` and `failed` statuses are available for manual revocation or email delivery failure. |
-| **Phone verification** | Firebase Phone OTP. Phone number is the primary identity for returning users. Email is verified separately via Resend OTP. |
-| **Data retention** | Indefinite. No automated deletion. |
+| **Invitation expiry** | No automatic expiry. Valid until accepted or revoked. |
+| **Phone verification** | Firebase Phone OTP. Phone is primary identity. |
+| **Data retention** | Indefinite. |
+| **Terms acceptance** | Stored on `users` table. Must be accepted before requesting advance. Separate from auth flow. |

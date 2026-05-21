@@ -1,28 +1,95 @@
 # PLAN.md — Bohikor2
 
-## Epic 1: Authentication (Current)
+## Epic 1: Authentication (Complete)
 
-Complete auth for admin dashboard and mobile app.
+- Backend: Firebase Admin SDK, Resend email OTP, auth middleware, role middleware, invitation CRUD, user creation, email/phone verification endpoints
+- Admin: Email/password login, invite page, users list with refresh
+- Mobile: Phone login (returning), email invite → email OTP → phone OTP (new), home screen with user info
+- Firebase: `@react-native-firebase/app` + `@react-native-firebase/auth` for native Phone Auth
 
-- **Backend:** Firebase Admin SDK integration, Resend email OTP, auth middleware, role middleware, invitation CRUD, user creation, email/phone verification endpoints
-- **Admin Dashboard:** Email/password login via Firebase, invite page, users list with suspend/activate
-- **Mobile:** Phone login (returning user), email invitation check → email OTP → phone OTP (new user), home screen with user info
+## Epic 2: Request & Payout (Current)
 
-## Epic 2: Salary Advance Core
+### Step-by-step implementation order:
 
-- Request window enforcement (15th–end of month, Africa/Douala timezone)
-- Daily/monthly throttling
-- Campay payout API integration
-- Kill switch
+**1. Database — Add advance_requests table**
+- Create migration: `000003_advance_requests.up.sql` with the table DDL from `docs/schema.md`
+- Create matching `.down.sql`
+- Run `go generate ./db/...` to regenerate sqlc models
 
-## Epic 3: Admin Monitoring
+**2. Backend — sqlc queries**
+- Add `db/queries/advance_requests.sql`:
+  - `CreateAdvanceRequest` — insert new request
+  - `GetAdvanceRequestByID` — lookup by ID
+  - `ListAdvanceRequestsByUserID` — user's request history
+  - `ListAdvanceRequests` — admin view (all requests, ordered by created_at DESC, with pagination)
+  - `UpdateAdvanceRequestStatus` — update status + optional failure_reason + payout_duration_seconds + campay_payout_ref
 
-- Request monitoring dashboard
+**3. Backend — Campay client**
+- Create `internal/campay/client.go`:
+  - `NewClient(username, password, baseURL, webhookSecret)`
+  - `InitiateTransfer(phoneNumber, amount, description)` — POST to Campay Transfer API
+  - `VerifyWebhook(payload, signature)` — HMAC-SHA256 verification using `CAMPAY_WEBHOOK_SECRET`
+- Add Campay config fields to `internal/config/config.go` (already present: `CampayAPIUsername`, `CampayAPIPassword`, `CampayWebhookSecret`, `CampayBaseURL`)
+- Wire client into `server.New()`
+
+**4. Backend — Handlers & routes**
+- `internal/handler/advance.go`:
+  - `POST /api/advance-requests` — create request, call Campay, return request
+  - `GET /api/advance-requests` — user's own request history (uses `RequireActiveUser` middleware)
+  - `GET /api/admin/requests` — admin view (uses `RequireAdmin` middleware)
+  - `POST /api/webhooks/campay` — public endpoint, verify HMAC, update request status
+- Wire routes in `server/server.go`:
+  - Public: `POST /api/webhooks/campay`
+  - User-protected: `POST /api/advance-requests`, `GET /api/advance-requests`
+  - Admin-protected: `GET /api/admin/requests`
+
+**5. Backend — Business logic**
+- Before creating request: check user is active, has `is_terms_accepted = true`, no existing request with status `initiated` or `pending`
+- On request creation: set `status = 'initiated'`, call Campay Transfer API
+- On Campay success: set `status = 'success'`, record `payout_duration_seconds`
+- On Campay failure: set `status = 'failed'`, record `failure_reason`
+- Log `request_initiated`, `payout_success`, `payout_failed` events to `events` table
+
+**6. Mobile — Terms screen**
+- Add `app/(app)/terms.tsx` — display terms text, checkbox, "Accept" button
+- On accept: call `POST /api/users/terms` (new endpoint) to update `is_terms_accepted`
+- Add route to tabs or as a stack screen accessible from home/profile
+
+**7. Mobile — Terms acceptance endpoint (Backend)**
+- Add `PUT /api/users/terms` — update `is_terms_accepted = true`, `terms_accepted_at`, `terms_version`, `user_ip_at_consent`
+- Add sqlc query: `UpdateTermsAcceptance` (already exists in `users.sql`)
+
+**8. Mobile — Request flow**
+- Add "Request Advance" button to `home.tsx`
+- On tap: show confirmation modal (advance + charges will be deducted per terms)
+- On confirm: call `POST /api/advance-requests`
+- On success: navigate to history screen
+- On error: show message (e.g., "Terms not accepted", "Request already in progress")
+
+**9. Mobile — Transaction history**
+- Replace empty `history.tsx` with real data: call `GET /api/advance-requests`
+- Show list of requests with status badges, date, amount
+- Auto-refresh or manual refresh button
+
+**10. Admin — Requests page**
+- Add `admin/src/app/(dashboard)/requests/page.tsx`
+- Add `admin/src/hooks/use-requests.ts` hook
+- Table: user email, amount (XAF), status badge, created date, payout ref, failure reason
+- Add "Requests" to sidebar navigation
+- Add `RequestStatus` to `admin/src/types/index.ts`
+
+**11. Tests**
+- Backend: unit tests for Campay client (mock HTTP), advance request handler, webhook handler
+- Mobile: verify terms acceptance flow, request creation, history rendering
+- Admin: requests page renders, status badges correct
+
+## Epic 3: Pilot Launch (Future)
+
 - Kill switch toggle
-- Event logs
-
-## Epic 4: Pilot Launch
-
-- E2E testing
-- Production deployment
-- Observability
+- Request window enforcement (15th–end of month)
+- Daily/monthly throttling
+- Post-payout survey
+- Payout speed metrics
+- Push/SMS/email notifications
+- Events log page
+- E2E testing, production deployment

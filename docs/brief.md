@@ -2,53 +2,67 @@
 
 ## Overview
 
-Bohikor2 is a salary advance pilot app. The current scope (Epic 1) implements **authentication only** — admin login, employee invitation, and employee signup/login. Salary advance features (request flow, Campay payouts, surveys, kill switch) are deferred to subsequent epics.
+Bohikor2 is a salary advance pilot app. Employees can request a one-time 10,000 XAF advance, paid instantly via Campay mobile money.
 
-## Authentication Flows
+## Current Scope (Epic 2): Request & Payout
+
+Users who have completed authentication (Epic 1) can now request an advance and receive funds. Admins can monitor requests.
+
+## Auth (Epic 1 — Complete)
+
+- **Admin:** Email/password via Firebase → verified against `admins` table → dashboard with Invite + Users
+- **Mobile:** Phone login (returning) or email invite → email OTP → phone OTP → user created → home
+
+## Request Flow (Epic 2 — Current)
+
+### Mobile
+
+1. User taps "Request Advance" on home screen
+2. Confirmation modal: informs user that advance + charges will be deducted from salary per terms
+3. Backend checks: user exists, is active, has accepted terms, no active request in progress
+4. Request created with `status = 'initiated'`
+5. Backend calls Campay Transfer API to send 10,000 XAF to user's phone number
+6. Campay processes payout → sends webhook to backend
+7. Backend verifies webhook HMAC signature, updates request status (`pending` → `success` or `failed`)
+8. User sees request in transaction history with live status
+
+### Eligibility (for now)
+
+- User must exist and be `active`
+- User must have `is_terms_accepted = true`
+- No existing request with status `initiated` or `pending` (prevent duplicate in-flight requests)
+- ~~Request window 15th–end of month~~ — **deferred**
+- ~~Daily attempt limit~~ — **deferred**
+- ~~Monthly success limit~~ — **deferred**
+
+### Terms Handling
+
+- Terms are accepted via a dedicated screen in the mobile app (separate from auth)
+- Stored on `users` table: `is_terms_accepted`, `terms_accepted_at`, `terms_version`, `user_ip_at_consent`
+- Before any advance request, backend checks `is_terms_accepted = true`
+- If not accepted, return error prompting user to accept terms first
+- Terms text is hardcoded in the mobile app for now (no versioning system needed yet)
 
 ### Admin Dashboard
 
-1. Admin signs in with email/password via Firebase Auth.
-2. Backend verifies the Firebase ID token and confirms the user exists in the `admins` table.
-3. Dashboard shows two panels: **Invite** (send invitation emails) and **Users** (list created employees).
+- **Requests page:** Table showing all advance requests — user email, amount, status, created date, payout reference, failure reason
+- **Users page:** Already exists (from Epic 1)
+- **Invite page:** Already exists (from Epic 1)
 
-### Mobile — Returning User (Login)
+## Campay Integration
 
-1. User enters phone number.
-2. Firebase Phone Auth sends an SMS OTP.
-3. User enters the OTP. Firebase verifies and returns an ID token.
-4. App sends ID token to `POST /api/auth/verify`.
-5. Backend looks up user by `firebase_uid`. If found and active, returns user data.
-6. App routes to home screen.
+- **Transfer API** — send money to user's mobile money wallet
+- **Webhook** — receive payout status updates
+- **HMAC verification** — verify webhook signatures using `CAMPAY_WEBHOOK_SECRET`
+- All credentials configured in backend `.env`
 
-**Edge cases:**
-- User not found → "No account found. Please sign up first."
-- User suspended → "Your account has been suspended. Contact your manager."
-- 30-day session expired → Force re-authentication.
+## Future (Deferred)
 
-### Mobile — Fresh Start (Signup)
-
-1. User enters the email they were invited with.
-2. App calls `GET /api/auth/check-invite?email=...`. If the email has no active invitation, the user is blocked.
-3. If invited, app calls `POST /api/auth/send-email-otp` → 6-digit code sent via Resend.
-4. User enters the code. App calls `POST /api/auth/verify-email-otp`.
-5. App navigates to phone verification. User enters their phone number.
-6. Firebase Phone Auth sends an SMS OTP. User enters the code.
-7. App calls `POST /api/auth/verify-phone-otp` with the phone number and the Firebase ID token.
-8. Backend creates the user record, marks the invitation as accepted, logs a `signup_completed` event.
-9. App routes to home screen.
-
-**Edge cases:**
-- If user already exists → "You already have an account. Please log in." → route to login.
-- If invitation was already accepted but user not yet verified → route to phone verification.
-- No invitation found → "Your email is not invited. Contact your manager."
-
-## Verification
-
-- **Employee primary identity:** Phone number (Firebase Phone Auth).
-- **Employee email verification:** 6-digit OTP via Resend. Stored in `email_otps` table, consumed on success.
-- **Admin identity:** Email/password via Firebase Auth.
-
-## Data Retention
-
-All data is retained indefinitely after the pilot concludes. No automated deletion schedule.
+- Kill switch (block new requests, flag in-flight for review)
+- Request window enforcement (15th–end of month, Africa/Douala)
+- Daily attempt limit (1/day), monthly success limit (1/month)
+- Post-payout satisfaction survey
+- Payout speed metrics (P50/P90)
+- Push/SMS/email notifications
+- Events log page on admin dashboard
+- Admin management page
