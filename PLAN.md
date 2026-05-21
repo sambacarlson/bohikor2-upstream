@@ -7,7 +7,7 @@
 - Mobile: Phone login (returning), email invite → email OTP → phone OTP (new), home screen with user info
 - Firebase: `@react-native-firebase/app` + `@react-native-firebase/auth` for native Phone Auth
 
-## Epic 2: Request & Payout (Current)
+## Epic 2: Request & Payout (Complete)
 
 ### Step-by-step implementation order:
 

@@ -12,8 +12,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/shopspring/decimal"
 
 	db "github.com/Iknite-Space/bohikor2/db/sqlc"
+	"github.com/Iknite-Space/bohikor2/internal/campay"
 	"github.com/Iknite-Space/bohikor2/internal/config"
 	"github.com/Iknite-Space/bohikor2/internal/email"
 	"github.com/Iknite-Space/bohikor2/internal/firebaseapp"
@@ -57,6 +59,13 @@ func New(cfg *config.Config) (*Server, error) {
 	emailClient := email.NewClient(cfg.ResendAPIKey, cfg.FromEmail)
 
 	queries := db.New(pool)
+
+	campayClient := campay.NewClient(
+		cfg.CampayAPIUsername,
+		cfg.CampayAPIPassword,
+		cfg.CampayBaseURL,
+		cfg.CampayWebhookSecret,
+	)
 
 	inviteStore := service.NewRealInviteStore(queries)
 	inviteService := service.NewInviteService(inviteStore, emailClient, queries)
@@ -105,7 +114,30 @@ func New(cfg *config.Config) (*Server, error) {
 	userGroup.Use(middleware.RequireActiveUser(queries))
 	{
 		userGroup.GET("/me", handleUserMe(queries))
+		userGroup.PUT("/terms", handler.HandleAcceptTerms(queries))
 	}
+
+	// Advance request routes (protected by Firebase auth + active user check)
+	advanceHandler := handler.NewAdvanceHandler(queries, campayClient, decimal.NewFromInt(10000))
+	advanceGroup := router.Group("/api/advance-requests")
+	advanceGroup.Use(authMiddleware)
+	advanceGroup.Use(middleware.RequireActiveUser(queries))
+	{
+		advanceGroup.POST("", advanceHandler.CreateRequest)
+		advanceGroup.GET("", advanceHandler.ListUserRequests)
+	}
+
+	// Admin advance request routes
+	adminAdvanceGroup := router.Group("/api/admin/requests")
+	adminAdvanceGroup.Use(authMiddleware)
+	adminAdvanceGroup.Use(middleware.RequireAdmin(queries))
+	{
+		adminAdvanceGroup.GET("", handler.HandleListAdminRequests(queries))
+	}
+
+	// Webhook routes (public - HMAC verified)
+	webhookHandler := handler.NewWebhookHandler(queries, campayClient)
+	router.POST("/api/webhooks/campay", webhookHandler.HandleCampayWebhook)
 
 	s := &Server{
 		cfg:      cfg,

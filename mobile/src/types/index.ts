@@ -2,6 +2,8 @@ export type UserStatus = "active" | "suspended";
 
 export type InvitationStatus = "pending" | "sent" | "accepted" | "revoked" | "failed";
 
+export type RequestStatus = "initiated" | "pending" | "success" | "failed";
+
 export interface User {
   id: string;
   email: string;
@@ -26,4 +28,16 @@ export interface Invitation {
   invited_by: string | null;
   sent_at: string;
   accepted_at: string | null;
+}
+
+export interface AdvanceRequest {
+  id: string;
+  user_id: string;
+  amount_xaf: string;
+  status: RequestStatus;
+  campay_payout_ref: string | null;
+  failure_reason: string | null;
+  payout_duration_seconds: number | null;
+  created_at: string;
+  updated_at: string;
 }

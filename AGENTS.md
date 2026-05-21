@@ -84,7 +84,7 @@ Mobile requires a dev client build (`npx expo run:android/ios`) — Expo Go does
 
 **Edge cases:** User already exists → route to login. Invite accepted but user not verified → route to phone verification. Suspended user → blocked.
 
-## Request Flow (Epic 2 — Current)
+## Request Flow (Epic 2 — Complete)
 
 1. User taps "Request Advance" → confirmation modal
 2. Backend checks: user active, terms accepted, no in-flight request

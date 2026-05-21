@@ -13,7 +13,7 @@ Users who have completed authentication (Epic 1) can now request an advance and 
 - **Admin:** Email/password via Firebase → verified against `admins` table → dashboard with Invite + Users
 - **Mobile:** Phone login (returning) or email invite → email OTP → phone OTP → user created → home
 
-## Request Flow (Epic 2 — Current)
+## Request Flow (Epic 2 — Complete)
 
 ### Mobile
 
