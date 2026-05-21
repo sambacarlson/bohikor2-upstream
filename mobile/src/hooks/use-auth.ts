@@ -52,10 +52,10 @@ export interface VerifyPhoneOTPResponse {
 
 export function useVerifyPhoneOTP() {
   return useMutation({
-    mutationFn: async (phoneNumber: string) => {
+    mutationFn: async ({ email, phoneNumber }: { email: string; phoneNumber: string }) => {
       const { data } = await api.post<{ data: VerifyPhoneOTPResponse }>(
         "/api/auth/verify-phone-otp",
-        { phone_number: phoneNumber }
+        { email, phone_number: phoneNumber }
       );
       return data.data;
     },

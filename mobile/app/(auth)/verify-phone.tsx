@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import { useVerifyPhoneOTP } from "@/src/hooks/use-auth";
 
 export default function VerifyPhoneScreen() {
   const router = useRouter();
+  const { email } = useLocalSearchParams<{ email: string }>();
   const [phoneNumber, setPhoneNumber] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [step, setStep] = useState<"phone" | "otp">("phone");
@@ -88,7 +89,7 @@ export default function VerifyPhoneScreen() {
     }
 
     try {
-      await verifyPhoneOTP.mutateAsync(phoneNumber.trim());
+      await verifyPhoneOTP.mutateAsync({ email, phoneNumber: phoneNumber.trim() });
       router.replace("/(app)/(tabs)/home");
     } catch (err: unknown) {
       if (

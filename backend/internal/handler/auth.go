@@ -132,18 +132,12 @@ func (h *AuthHandler) VerifyPhoneOTP(c *gin.Context) {
 		return
 	}
 
-	emailVal, ok := c.Get("email")
-	if !ok {
-		JSONError(c, http.StatusBadRequest, "missing_email", "Email not found in Firebase token")
-		return
-	}
-	email := emailVal.(string)
-
 	var req struct {
+		Email       string `json:"email" binding:"required,email"`
 		PhoneNumber string `json:"phone_number" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		JSONError(c, http.StatusBadRequest, "invalid_request", "phone_number is required")
+		JSONError(c, http.StatusBadRequest, "invalid_request", "email and phone_number are required")
 		return
 	}
 
@@ -155,13 +149,13 @@ func (h *AuthHandler) VerifyPhoneOTP(c *gin.Context) {
 		return
 	}
 
-	_, err = h.queries.GetUserByEmail(ctx, email)
+	_, err = h.queries.GetUserByEmail(ctx, req.Email)
 	if err == nil {
 		JSONError(c, http.StatusConflict, "user_exists", "User already exists with this email")
 		return
 	}
 
-	invitation, err := h.queries.GetActiveInvitationByEmail(ctx, email)
+	invitation, err := h.queries.GetActiveInvitationByEmail(ctx, req.Email)
 	if err != nil {
 		JSONError(c, http.StatusForbidden, "no_invitation", "No active invitation found")
 		return
@@ -173,7 +167,7 @@ func (h *AuthHandler) VerifyPhoneOTP(c *gin.Context) {
 	}
 
 	user, err := h.queries.CreateUser(ctx, db.CreateUserParams{
-		Email:         email,
+		Email:         req.Email,
 		EmailVerified: true,
 		FirebaseUid:   firebaseUID.(string),
 		PhoneNumber:   req.PhoneNumber,
@@ -185,7 +179,7 @@ func (h *AuthHandler) VerifyPhoneOTP(c *gin.Context) {
 		return
 	}
 
-	if _, err := h.queries.AcceptInvitation(ctx, email); err != nil {
+	if _, err := h.queries.AcceptInvitation(ctx, req.Email); err != nil {
 		JSONError(c, http.StatusInternalServerError, "accept_invitation_failed", "Failed to accept invitation")
 		return
 	}
