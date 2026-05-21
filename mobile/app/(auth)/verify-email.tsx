@@ -84,7 +84,7 @@ export default function VerifyEmailScreen() {
           </Text>
           <TextInput
             ref={inputRef}
-            className="border border-gray-300 rounded-lg px-4 py-3 text-base text-center tracking-widest text-xl"
+            className="border border-gray-300 rounded-lg px-4 py-3 text-center tracking-widest"
             placeholder="000000"
             keyboardType="number-pad"
             maxLength={6}
@@ -101,11 +101,10 @@ export default function VerifyEmailScreen() {
           ) : null}
 
           <TouchableOpacity
-            className={`mt-6 rounded-lg py-4 items-center ${
-              verifyEmailOTP.isPending
+            className={`mt-6 rounded-lg py-4 items-center ${verifyEmailOTP.isPending
                 ? "bg-blue-300"
                 : "bg-blue-600"
-            }`}
+              }`}
             onPress={handleVerify}
             disabled={verifyEmailOTP.isPending || code.length !== 6}
           >

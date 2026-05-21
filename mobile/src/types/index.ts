@@ -1,8 +1,6 @@
 export type UserStatus = "active" | "suspended";
 
-export type RequestStatus = "initiated" | "pending" | "success" | "failed";
-
-export type InvitationStatus = "pending" | "sent" | "accepted" | "expired" | "revoked" | "failed";
+export type InvitationStatus = "pending" | "sent" | "accepted" | "revoked" | "failed";
 
 export interface User {
   id: string;
@@ -21,52 +19,11 @@ export interface User {
   updated_at: string;
 }
 
-export interface AdvanceRequest {
-  id: string;
-  user_id: string;
-  amount_xaf: number;
-  status: RequestStatus;
-  campay_payout_ref: string | null;
-  failure_reason: string | null;
-  payout_duration_seconds: number | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Event {
-  id: string;
-  user_id: string | null;
-  admin_id: string | null;
-  event_type: string;
-  metadata: Record<string, unknown> | null;
-  created_at: string;
-}
-
-export interface Survey {
-  id: string;
-  user_id: string;
-  request_id: string;
-  satisfaction_score: number | null;
-  feedback: string | null;
-  created_at: string;
-}
-
 export interface Invitation {
   id: string;
   email: string;
   status: InvitationStatus;
-  invited_by: string | null; // TODO: include in admin dashboard UI
+  invited_by: string | null;
   sent_at: string;
   accepted_at: string | null;
-}
-
-export interface KillSwitchState {
-  active: boolean;
-}
-
-export interface PaginatedResponse<T> {
-  data: T[];
-  total: number;
-  page: number;
-  per_page: number;
 }

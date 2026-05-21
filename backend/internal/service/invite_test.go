@@ -158,11 +158,11 @@ func TestInvite_AcceptedInvitationExists(t *testing.T) {
 	}
 }
 
-func TestInvite_ReinviteAfterExpiry(t *testing.T) {
+func TestInvite_ReinviteAfterRevocation(t *testing.T) {
 	store := &mockStore{
 		invitation: &db.Invitation{
-			Email:  "expired@example.com",
-			Status: db.InvitationStatusExpired,
+			Email:  "revoked@example.com",
+			Status: db.InvitationStatusRevoked,
 		},
 	}
 	emailSender := &mockEmailSender{}

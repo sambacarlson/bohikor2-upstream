@@ -4,23 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { auth } from "@/lib/firebase";
-import {
-  LayoutDashboard,
-  Mail,
-  Users,
-  CreditCard,
-  ShieldAlert,
-  ScrollText,
-  LogOut,
-} from "lucide-react";
+import { Mail, Users, LogOut } from "lucide-react";
 
 const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/invite", label: "Invite", icon: Mail },
   { href: "/users", label: "Users", icon: Users },
-  { href: "/requests", label: "Requests", icon: CreditCard },
-  { href: "/kill-switch", label: "Kill Switch", icon: ShieldAlert },
-  { href: "/events", label: "Events", icon: ScrollText },
 ];
 
 export function Sidebar() {

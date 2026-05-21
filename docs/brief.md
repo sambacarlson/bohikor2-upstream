@@ -2,129 +2,52 @@
 
 ## Overview
 
-Build a lightweight internal salary advance platform for a small employee pilot program. The app allows verified employees to request a one-time emergency cash advance of 10,000 XAF before payday. Requests are paid instantly through mobile money using Campay. The primary goal is not scale. The goal is to validate employee demand, payout speed, operational reliability, and user trust. This should be implemented as a simple, operationally safe MVP with strong logging and observability.
+Bohikor2 is a salary advance pilot app. The current scope (Epic 1) implements **authentication only** — admin login, employee invitation, and employee signup/login. Salary advance features (request flow, Campay payouts, surveys, kill switch) are deferred to subsequent epics.
 
-## Business Goal
+## Authentication Flows
 
-Provide employees with fast access to emergency cash before payday while measuring how many employees use the service, how often they attempt requests, payout success/failure rates, and how quickly funds reach users.
+### Admin Dashboard
 
-## Core Rules
+1. Admin signs in with email/password via Firebase Auth.
+2. Backend verifies the Firebase ID token and confirms the user exists in the `admins` table.
+3. Dashboard shows two panels: **Invite** (send invitation emails) and **Users** (list created employees).
 
-- **Fixed advance amount:** 10,000 XAF.
-- **Request Window:** Advances can only be requested between the **15th and the last day of every month**, evaluated in **Cameroon local time (Africa/Douala, WAT/UTC+1)**.
-- **One successful advance allowed per calendar month:** Deterministically managed within the request window. A success on Jan 31 does not block a request on Feb 15.
-- **Maximum one request attempt per day:** Additional requests are rejected and logged. Day boundaries are evaluated in Cameroon time (Africa/Douala).
-- **Uniform cap:** All users have the same cap.
-- **No manual approval flow in MVP:** Payouts should be automatic.
+### Mobile — Returning User (Login)
 
-## Primary User Types
+1. User enters phone number.
+2. Firebase Phone Auth sends an SMS OTP.
+3. User enters the OTP. Firebase verifies and returns an ID token.
+4. App sends ID token to `POST /api/auth/verify`.
+5. Backend looks up user by `firebase_uid`. If found and active, returns user data.
+6. App routes to home screen.
 
-### Employee
+**Edge cases:**
+- User not found → "No account found. Please sign up first."
+- User suspended → "Your account has been suspended. Contact your manager."
+- 30-day session expired → Force re-authentication.
 
-Can:
+### Mobile — Fresh Start (Signup)
 
-- sign up (phone-first authentication),
-- verify email and phone number,
-- accept terms,
-- request advance (only between 15th and end of month in Cameroon time),
-- view request history.
+1. User enters the email they were invited with.
+2. App calls `GET /api/auth/check-invite?email=...`. If the email has no active invitation, the user is blocked.
+3. If invited, app calls `POST /api/auth/send-email-otp` → 6-digit code sent via Resend.
+4. User enters the code. App calls `POST /api/auth/verify-email-otp`.
+5. App navigates to phone verification. User enters their phone number.
+6. Firebase Phone Auth sends an SMS OTP. User enters the code.
+7. App calls `POST /api/auth/verify-phone-otp` with the phone number and the Firebase ID token.
+8. Backend creates the user record, marks the invitation as accepted, logs a `signup_completed` event.
+9. App routes to home screen.
 
-### Admin
+**Edge cases:**
+- If user already exists → "You already have an account. Please log in." → route to login.
+- If invitation was already accepted but user not yet verified → route to phone verification.
+- No invitation found → "Your email is not invited. Contact your manager."
 
-Can:
+## Verification
 
-- invite employees,
-- suspend users,
-- monitor requests,
-- monitor payout status,
-- activate/deactivate kill switch,
-- view analytics and logs.
-
-## Employee Flow
-
-### 1. Invitation
-
-Employee receives invitation email. Track invite sent timestamp and recipient email. Expired or revoked invitations can be re-sent.
-
-### 2. Signup (Phone-First Authentication)
-
-Employee opens the mobile app and enters their email and phone number. The system checks if the email has a pending invitation. If not, the user is blocked with a message to contact their manager.
-
-If the email is invited, verification proceeds synchronously:
-
-1. **Email verification:** A 6-digit OTP is sent to the email via Resend. User enters the code to prove inbox ownership. State is persisted — if the user closes the app, they can resume.
-2. **Phone verification:** After email is verified, Firebase Phone Auth sends an SMS OTP to the phone number. User enters the code to prove phone ownership. This phone number becomes the user's primary identity for all future logins.
-
-Both email and phone must be verified before the user can proceed. On success, the user record is created, the invitation is marked as accepted, and the user is redirected to the main screen.
-
-**Session management:** Phone number is the primary login credential for returning users. Firebase ID tokens are used for API authentication. Sessions expire after 30 days, requiring re-authentication via phone OTP.
-
-User views explicit terms and gives consent. Track consent version, consent timestamp, and user IP address.
-
-### 3. Terms Acceptance
-
-User taps "Request Advance". The system runs eligibility checks:
-
-- Check if current date (in Africa/Douala timezone) is between the **15th and the last day of the month**.
-- Check daily attempt rule (evaluated in Africa/Douala timezone).
-- Check monthly limit rule (one success per calendar month).
-- Check if the global Admin Kill Switch is active. **Kill switch behavior:** Block all **new** requests. In-flight payouts (already in `initiated` or `pending` status) are allowed to complete but are **flagged for manual admin review**.
-- If checks pass, system transitions request status to `initiated` and calls the Campay Payout API.
-
-### 4. Request Advance
-
-The system listens to Campay webhooks or polls for status updates.
-
-- **Success:** Update request status to `success` and show a completion screen to the user.
-- **Failure:** Update request status to `failed`, store error details, and show a clear message to the user.
-
-**Webhook Authentication:** All incoming Campay webhook payloads **must** be verified using cryptographic signature validation (shared secret / HMAC) before processing. Reject any webhook that fails signature verification. Store the Campay webhook secret in environment variables — never hardcode.
-
-### 5. Feedback Survey
-
-Immediately after a payout reaches a **final** status (`success` or `failed`), a single-question satisfaction survey is shown to the user. Surveys are not shown for `pending` or `initiated` states.
-
-## Core Data & Tracking
-
-### Request Records
-
-Track:
-
-- request ID,
-- user ID,
-- status,
-- timestamps,
-- payout reference,
-- failure reason,
-- payout duration.
-
-### Event Logs
-
-Track all major events with timestamps: `user_invited`, `email_otp_sent`, `email_otp_verified`, `phone_otp_sent`, `phone_otp_verified`, `signup_completed`, `request_initiated`, `payout_success`, `payout_failed`, `survey_submitted`, `kill_switch_activated`, `kill_switch_deactivated`, `user_suspended`, `user_activated`.
-
-## Operational Requirements
-
-### Reliability
-
-- Prevent duplicate payouts.
-- Ensure retries are safe (idempotency keys on Campay API calls).
-- Handle webhook failures gracefully (retry queue with exponential backoff).
-
-### Security
-
-- Minimize stored PII.
-- Hash sensitive data where possible.
-- Restrict admin access.
-- Encrypt secrets and API keys.
-- Verify all incoming Campay webhook signatures before processing.
-
-### Observability
-
-Critical requirement. System must easily answer: What failed? Why did it fail? How long did it take? Which users are affected?
-
-### Success Criteria
-
-Target payout speed: P50 ≤ 60 seconds, P90 ≤ 120 seconds.
+- **Employee primary identity:** Phone number (Firebase Phone Auth).
+- **Employee email verification:** 6-digit OTP via Resend. Stored in `email_otps` table, consumed on success.
+- **Admin identity:** Email/password via Firebase Auth.
 
 ## Data Retention
 

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import {
   View,
   Text,
@@ -19,7 +19,6 @@ import { useVerifyPhoneOTP } from "@/src/hooks/use-auth";
 
 export default function VerifyPhoneScreen() {
   const router = useRouter();
-  const { email } = useLocalSearchParams<{ email: string }>();
   const [phoneNumber, setPhoneNumber] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [step, setStep] = useState<"phone" | "otp">("phone");
@@ -90,7 +89,7 @@ export default function VerifyPhoneScreen() {
 
     try {
       await verifyPhoneOTP.mutateAsync(phoneNumber.trim());
-      router.replace("/(app)/terms");
+      router.replace("/(app)/(tabs)/home");
     } catch (err: unknown) {
       if (
         err &&
@@ -146,9 +145,8 @@ export default function VerifyPhoneScreen() {
               ) : null}
 
               <TouchableOpacity
-                className={`mt-6 rounded-lg py-4 items-center ${
-                  verifyPhoneOTP.isPending ? "bg-blue-300" : "bg-blue-600"
-                }`}
+                className={`mt-6 rounded-lg py-4 items-center ${verifyPhoneOTP.isPending ? "bg-blue-300" : "bg-blue-600"
+                  }`}
                 onPress={handleSendCode}
                 disabled={verifyPhoneOTP.isPending}
               >
@@ -181,7 +179,7 @@ export default function VerifyPhoneScreen() {
                 Verification code
               </Text>
               <TextInput
-                className="border border-gray-300 rounded-lg px-4 py-3 text-base text-center tracking-widest text-xl"
+                className="border border-gray-300 rounded-lg px-4 py-3 text-center tracking-widest"
                 placeholder="000000"
                 keyboardType="number-pad"
                 maxLength={6}
@@ -198,9 +196,8 @@ export default function VerifyPhoneScreen() {
               ) : null}
 
               <TouchableOpacity
-                className={`mt-6 rounded-lg py-4 items-center ${
-                  verifyPhoneOTP.isPending ? "bg-blue-300" : "bg-blue-600"
-                }`}
+                className={`mt-6 rounded-lg py-4 items-center ${verifyPhoneOTP.isPending ? "bg-blue-300" : "bg-blue-600"
+                  }`}
                 onPress={handleVerifyOTP}
                 disabled={verifyPhoneOTP.isPending || otpCode.length !== 6}
               >

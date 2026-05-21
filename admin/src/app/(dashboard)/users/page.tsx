@@ -17,11 +17,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, UserMinus, UserCheck } from "lucide-react";
+import { MoreHorizontal, UserMinus, UserCheck, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 export default function UsersPage() {
-  const { data, isLoading } = useUsers();
+  const { data, isLoading, refetch, isRefetching } = useUsers();
   const suspendUser = useSuspendUser();
   const activateUser = useActivateUser();
 
@@ -50,6 +50,16 @@ export default function UsersPage() {
         <p className="text-muted-foreground">
           Manage employee accounts
         </p>
+        <Button
+          variant="outline"
+          size="sm"
+          className="ml-4"
+          onClick={() => refetch()}
+          disabled={isRefetching}
+        >
+          <RefreshCw className={`mr-2 h-4 w-4 ${isRefetching ? "animate-spin" : ""}`} />
+          Refresh
+        </Button>
       </div>
 
       <div className="rounded-md border">

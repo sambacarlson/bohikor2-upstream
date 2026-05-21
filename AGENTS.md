@@ -1,134 +1,119 @@
-# AGENTS.md — Project Conventions & Build Instructions
+# AGENTS.md — Bohikor2
 
-## Project Overview
+Salary advance pilot app. Current scope: **Epic 1 — Authentication only**. See `docs/brief.md` for auth flows and `docs/schema.md` for the data contract.
 
-Bohikor2 is a salary advance pilot app. See `docs/brief.md` for business rules and `docs/schema.md` for the data contract; this file is the operational guide for working on the codebase.
+## Stack
 
-## Repository Structure (Target)
+- **Backend:** Go 1.26, Gin, sqlc, pgx/v5, golang-migrate, Firebase Admin SDK, Resend
+- **Admin:** Next.js 16, shadcn/ui, Tailwind v4, TanStack Query, Firebase Auth
+- **Mobile:** Expo SDK 54, React Native 0.81, NativeWind, TanStack Query, Firebase Auth
+- **Database:** PostgreSQL 17 (Neon/Supabase)
+- **Testing:** Go `testing`, Jest + RTL (admin), Jest + RNTL (mobile)
+
+## Repo Structure
 
 ```
 bohikor2/
-├── docs/              # Brief, schema, stack (source of truth — already exists)
-├── PLAN.md            # Master execution plan
-├── AGENTS.md          # This file
+├── docs/              # brief.md, schema.md
+├── PLAN.md
+├── AGENTS.md
 ├── backend/           # Go API (Gin + sqlc + golang-migrate)
-│   ├── cmd/           # Entry points
-│   ├── internal/      # App logic (handlers, services, repositories)
-│   ├── db/            # sqlc queries + migrations
-│   ├── migrations/    # golang-migrate SQL files
+│   ├── cmd/server/main.go
+│   ├── internal/      # handlers, services, middleware, config
+│   ├── db/queries/    # sqlc query definitions
+│   ├── db/sqlc/       # generated Go code (do not edit)
+│   ├── migrations/    # numbered .up.sql / .down.sql files
 │   └── go.mod
-├── admin/             # Next.js 16 dashboard (shadcn/ui + TanStack Query)
-│   ├── src/
-│   └── package.json
-└── mobile/            # Expo SDK 54 + React Native 0.81 (NativeWind)
-    ├── app/           # Expo Router file-based routes
-    └── package.json
+├── admin/             # Next.js dashboard (invite + users)
+│   └── src/
+└── mobile/            # Expo app (phone login + signup)
+    ├── app/           # Expo Router routes
+    └── src/           # hooks, providers, types, lib
 ```
 
-## Build & Run Commands
+## Build & Run
 
-### Backend (Go 1.26)
+### Backend
 
 ```bash
-# Install dependencies
 cd backend && go mod download
-
-# Generate sqlc code (after changing queries or schema)
-go generate ./db/...
-
-# Run database migrations (pre-deploy, never on app boot)
-go run github.com/golang-migrate/migrate/v4/cmd/migrate \
-  -source=file://migrations -database="$DATABASE_URL" up
-
-# Run tests
-go test ./...
-
-# Lint
-golangci-lint run
-
-# Start dev server
-go run cmd/server/main.go
+go generate ./db/...          # regenerate sqlc after query changes
+go run cmd/server/main.go     # dev server
+go test ./...                  # tests
+golangci-lint run              # lint
 ```
 
-### Admin Dashboard (Next.js 16)
+### Admin
 
 ```bash
-cd admin
-npm install
-npm run dev           # Dev server
-npm run lint          # ESLint
-npm run typecheck     # tsc --noEmit
-npm run test          # Jest
-npm run test:e2e      # Cypress
+cd admin && npm install
+npm run dev       # dev server
+npm run lint      # ESLint
+npm run typecheck # tsc --noEmit
+npm run test      # Jest
 ```
 
-### Mobile App (Expo SDK 54)
+### Mobile
 
 ```bash
-cd mobile
-npm install
-npx expo start        # Dev server
-npm run lint          # ESLint
-npm run typecheck     # tsc --noEmit
-npm run test          # Jest + RNTL
+cd mobile && npm install
+npx expo start    # dev server
+npm run lint      # ESLint
+npm run typecheck # tsc --noEmit
+npm run test      # Jest + RNTL
 ```
 
-## Code Style & Conventions
+## Auth Flows
 
-### Go (Backend)
+### Admin Dashboard
 
-- **Formatting:** `gofmt` (enforced by `golangci-lint`).
-- **Linting:** `golangci-lint run` — must pass before every commit.
-- **Error handling:** No wrapped error silencing. Always log or return errors. Use `slog` structured fields, not string interpolation.
-- **`updated_at` column:** The database has no auto-update trigger. **Every `UPDATE` query must explicitly set `updated_at = NOW()`.**
-- **Timezone-sensitive logic:** All date-window checks (15th–end of month, daily throttling) must evaluate timestamps in `Africa/Douala` (WAT/UTC+1). Use `time.LoadLocation("Africa/Douala")` — never rely on server local time.
-- **sqlc:** All SQL queries live in `.sql` files under `db/queries/`. Run `go generate ./db/...` after any query change. Never manually edit generated Go code.
-- **Migrations:** Numbered sequentially (`000001_schema.sql`, `000002_seed_kill_switch.sql`, etc.). Never modify a migration that has been applied to production — always add a new one. **Never use `IF NOT EXISTS` or `IF EXISTS` clauses** — migrations must be deterministic and fail loudly if applied out of order or to an unexpected state.
-- **Environment variables:** Use `github.com/caarlos0/env` or similar. Never hardcode secrets. All config reads from env vars.
+1. Sign in with email/password via Firebase Auth
+2. Backend verifies Firebase ID token, confirms user exists in `admins` table
+3. Dashboard has two panels: **Invite** (send invitation emails) and **Users** (list + refresh)
 
-### TypeScript (Admin + Mobile)
+### Mobile — Login (Returning User)
 
-- **Strict mode:** `"strict": true` in all `tsconfig.json` files.
-- **Formatting:** Prettier (config in repo root for consistency).
-- **Linting:** ESLint with `eslint:recommended` + framework-specific plugins.
-- **State fetching:** TanStack React Query for all server state. No local state for API data.
-- **Firebase Auth:** Token refresh handled by the Firebase SDK. Axios interceptors attach fresh ID tokens to every request header.
+1. Enter phone number → Firebase Phone OTP → `POST /api/auth/verify` → home
 
-### Database (PostgreSQL 17)
+### Mobile — Start Fresh (New User)
 
-- **Schema source of truth:** `docs/schema.md`. The DDL in that file is canonical. Any change starts with an update to that doc, then a migration file.
-- **Naming:** `snake_case` for tables and columns. `idx_<table>_<description>` for indexes.
-- **Timestamps:** All `TIMESTAMPTZ`. Never use `TIMESTAMP` without timezone.
-- **IDs:** UUIDs via `uuid_generate_v4()`.
-- **Migrations:** Run in CI as a pre-deploy step. Never auto-migrate on app boot.
+1. Enter invited email → `GET /api/auth/check-invite` → blocked if no invitation
+2. `POST /api/auth/send-email-otp` → 6-digit code via Resend
+3. Enter code → `POST /api/auth/verify-email-otp`
+4. Enter phone → Firebase Phone OTP → `POST /api/auth/verify-phone-otp` → user created, invite accepted → home
 
-## Business Rules Quick Reference
+**Edge cases:** User already exists → route to login. Invite accepted but user not verified → route to phone verification. Suspended user → blocked with message.
 
-| Rule | Detail |
-| :--- | :--- |
-| Advance amount | Fixed 10,000 XAF |
-| Request window | 15th–last day of month, Africa/Douala time |
-| Daily attempt limit | 1 per day per user (Africa/Douala time) |
-| Monthly success limit | 1 per calendar month per user |
-| Verification | Firebase Phone OTP (primary identity) + Resend email OTP |
-| Kill switch | Blocks **new** requests; in-flight payouts complete but flagged for review |
-| Survey trigger | On `success` or `failed` status only |
-| Webhook auth | Campay HMAC signature verification required |
-| Data retention | Indefinite (post-pilot retained) |
-| Timezone for all date logic | `Africa/Douala` (WAT / UTC+1) |
+## Code Style
 
-## Testing Requirements
+### Go
 
-- **Before every PR:** Lint and typecheck must pass for the changed workspace(s).
-- **Backend:** `go test ./...` + `golangci-lint run`.
-- **Admin:** `npm run lint && npm run typecheck && npm run test`.
-- **Mobile:** `npm run lint && npm run typecheck && npm run test`.
-- **E2E:** Cypress (admin) and Maestro (mobile) for critical user flows before release.
+- `gofmt` formatting, `golangci-lint run` must pass
+- All `UPDATE` queries must set `updated_at = NOW()`
+- Use `slog` with structured fields, no string interpolation for errors
+- Migrations: numbered sequentially, no `IF NOT EXISTS`/`IF EXISTS`
+- Config via environment variables (`caarlos0/env`)
 
-## Security Practices
+### TypeScript
 
-- Never commit secrets, API keys, or Firebase service account JSON to the repository.
-- All Campay webhook payloads must be HMAC-verified before processing.
-- Minimize stored PII. Hash or encrypt sensitive fields where possible.
-- Use environment variables for all configuration. Provide `.env.example` files with dummy values.
-- Admin endpoints require Firebase Auth ID token verification via `firebase-admin-go`.
+- Strict mode in all `tsconfig.json`
+- Prettier + ESLint
+- TanStack React Query for all server state
+- Axios interceptors attach Firebase ID tokens
+
+### Database
+
+- Schema source of truth: `docs/schema.md`
+- `snake_case` tables/columns, `idx_<table>_<desc>` for indexes
+- All timestamps `TIMESTAMPTZ`, IDs as UUIDs
+- Migrations run in CI pre-deploy, never on app boot
+
+## Testing
+
+Every PR must pass lint + typecheck + tests for the changed workspace(s).
+
+## Security
+
+- Never commit secrets or Firebase service account JSON
+- Use environment variables for all config (`.env.example` files with dummy values)
+- Admin endpoints require Firebase Auth ID token via `firebase-admin-go`

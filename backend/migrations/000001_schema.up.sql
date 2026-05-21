@@ -1,13 +1,12 @@
--- 000001_schema.sql
+-- 000001_schema.up.sql
 -- Source of truth: docs/schema.md
+-- Auth-only schema for Epic 1: Authentication
 
--- Extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Enums
-CREATE TYPE request_status AS ENUM ('initiated', 'pending', 'success', 'failed');
 CREATE TYPE user_status AS ENUM ('active', 'suspended');
-CREATE TYPE invitation_status AS ENUM ('sent', 'accepted', 'expired', 'revoked');
+CREATE TYPE invitation_status AS ENUM ('pending', 'sent', 'accepted', 'revoked', 'failed');
 
 -- Admins
 CREATE TABLE admins (
@@ -39,41 +38,27 @@ CREATE TABLE users (
 CREATE TABLE invitations (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email TEXT NOT NULL,
-    status invitation_status NOT NULL DEFAULT 'sent',
+    status invitation_status NOT NULL DEFAULT 'pending',
     invited_by UUID REFERENCES admins(id),
     sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    accepted_at TIMESTAMPTZ
-);
-
-CREATE UNIQUE INDEX idx_one_active_invitation_per_email
-ON invitations (email) WHERE (status IN ('sent', 'accepted'));
-
--- Advance Requests
-CREATE TABLE advance_requests (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES users(id),
-    amount_xaf NUMERIC(10, 2) NOT NULL DEFAULT 10000.00 CHECK (amount_xaf = 10000.00),
-    status request_status NOT NULL DEFAULT 'initiated',
-    campay_payout_ref TEXT UNIQUE,
-    failure_reason TEXT,
-    payout_duration_seconds INTEGER,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    accepted_at TIMESTAMPTZ,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- One request attempt per day per user (Cameroon time)
-CREATE UNIQUE INDEX idx_one_request_per_day
-ON advance_requests (user_id, ((created_at AT TIME ZONE 'Africa/Douala')::DATE));
+CREATE UNIQUE INDEX idx_one_active_invitation_per_email
+ON invitations (email) WHERE (status IN ('pending', 'sent', 'accepted'));
 
--- One successful advance per calendar month (Cameroon time)
-CREATE UNIQUE INDEX idx_one_success_per_month
-ON advance_requests (
-    user_id,
-    EXTRACT(MONTH FROM created_at AT TIME ZONE 'Africa/Douala'),
-    EXTRACT(YEAR FROM created_at AT TIME ZONE 'Africa/Douala')
-) WHERE (status = 'success');
+-- Email OTPs (temporary, for signup flow)
+CREATE TABLE email_otps (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email TEXT NOT NULL,
+    code TEXT NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
-CREATE INDEX idx_advance_requests_user_id ON advance_requests (user_id);
+CREATE INDEX idx_email_otps_email ON email_otps (email);
+CREATE INDEX idx_email_otps_expires_at ON email_otps (expires_at);
 
 -- Event Logs
 CREATE TABLE events (
@@ -88,21 +73,3 @@ CREATE TABLE events (
 CREATE INDEX idx_events_user_id ON events (user_id);
 CREATE INDEX idx_events_event_type ON events (event_type);
 CREATE INDEX idx_events_created_at ON events (created_at);
-
--- Surveys
-CREATE TABLE surveys (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES users(id),
-    request_id UUID NOT NULL REFERENCES advance_requests(id),
-    satisfaction_score INTEGER CHECK (satisfaction_score BETWEEN 1 AND 5),
-    feedback TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE (user_id, request_id)
-);
-
--- System Config
-CREATE TABLE system_config (
-    key TEXT PRIMARY KEY,
-    value JSONB NOT NULL,
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-);

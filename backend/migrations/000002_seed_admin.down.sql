@@ -1,0 +1,3 @@
+-- 000002_seed_admin.down.sql
+-- Reverse of 000002_seed_admin.up.sql
+-- Admin records are managed externally (Firebase + manual DB insert).

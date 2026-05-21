@@ -56,7 +56,7 @@ func (s *InviteService) Invite(ctx context.Context, email string, invitedByFireb
 
 	existing, err := s.store.GetInvitationByEmail(ctx, email)
 	if err == nil {
-		if existing.Status == db.InvitationStatusSent || existing.Status == db.InvitationStatusAccepted {
+		if existing.Status == db.InvitationStatusPending || existing.Status == db.InvitationStatusSent || existing.Status == db.InvitationStatusAccepted {
 			return nil, ErrActiveInvitationExists
 		}
 	}
