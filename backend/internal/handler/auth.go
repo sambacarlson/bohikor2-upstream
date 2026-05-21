@@ -116,6 +116,11 @@ func (h *AuthHandler) VerifyEmailOTP(c *gin.Context) {
 		return
 	}
 
+	if _, err := h.queries.AcceptInvitation(c.Request.Context(), req.Email); err != nil {
+		JSONError(c, http.StatusInternalServerError, "accept_invitation_failed", "Failed to accept invitation")
+		return
+	}
+
 	JSONOK(c, http.StatusOK)
 }
 

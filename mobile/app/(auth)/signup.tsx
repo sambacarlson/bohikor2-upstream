@@ -43,6 +43,13 @@ export default function SignupScreen() {
         );
         return;
       }
+      if (result.status === "accepted") {
+        router.push({
+          pathname: "/(auth)/verify-phone",
+          params: { email: email.trim() },
+        });
+        return;
+      }
       await sendEmailOTP.mutateAsync(email.trim());
       router.push({
         pathname: "/(auth)/verify-email",
