@@ -62,7 +62,7 @@ export default function UsersPage() {
               <TableHead>Status</TableHead>
               <TableHead>Terms</TableHead>
               <TableHead>Created</TableHead>
-              <TableHead className="w-[70px]"></TableHead>
+              <TableHead className="w-17.5"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

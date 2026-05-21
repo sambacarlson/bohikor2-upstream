@@ -23,6 +23,7 @@ export interface Invitation {
   id: string;
   email: string;
   status: InvitationStatus;
+  invited_by: string | null; // TODO: include in admin dashboard UI
   sent_at: string;
   accepted_at: string | null;
 }

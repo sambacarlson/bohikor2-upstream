@@ -6,31 +6,48 @@ import {
   type ReactNode,
 } from "react";
 import {
-  type User,
+  type User as FirebaseUser,
   onAuthStateChanged,
   signOut as firebaseSignOut,
 } from "firebase/auth";
 import { auth } from "@/src/lib/firebase";
+import { api } from "@/src/lib/api";
+import type { User } from "@/src/types";
 
 interface AuthContextType {
-  user: User | null;
+  firebaseUser: FirebaseUser | null;
+  backendUser: User | null;
   loading: boolean;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
-  user: null,
+  firebaseUser: null,
+  backendUser: null,
   loading: true,
   signOut: async () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [backendUser, setBackendUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
-      setUser(u);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setFirebaseUser(user);
+
+      if (user) {
+        try {
+          const { data } = await api.get<{ data: User }>("/api/users/me");
+          setBackendUser(data.data);
+        } catch {
+          setBackendUser(null);
+        }
+      } else {
+        setBackendUser(null);
+      }
+
       setLoading(false);
     });
     return unsubscribe;
@@ -38,10 +55,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     await firebaseSignOut(auth);
+    setBackendUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signOut }}>
+    <AuthContext.Provider
+      value={{ firebaseUser, backendUser, loading, signOut }}
+    >
       {children}
     </AuthContext.Provider>
   );

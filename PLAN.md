@@ -6,7 +6,7 @@
 | :--- | :---: | :---: | :--- |
 | **0. Foundation & Data Contract** | ✅ | P0 | Backend |
 | **1. Identity & Auth (Firebase)** | 🏗️ | P0 | Fullstack |
-| **2. Mobile: Onboarding & Phone Verification** | ⚪ | P1 | Mobile |
+| **2. Mobile: Onboarding & Phone Verification** | 🏗️ | P1 | Mobile |
 | **3. Backend: Eligibility & Campay Payouts** | ⚪ | P0 | Backend |
 | **4. Admin: Monitoring & Kill Switch** | 🏗️ | P1 | Admin |
 | **5. Observability & Event Logging** | ⚪ | P1 | Backend |
@@ -90,6 +90,9 @@
 | 2026-05-20 | ✅ Admin Invite UI + Tests | Admin dashboard invite page (`/invite`): email form, send button, invitations table with status badges, manual refresh. Jest + RTL test infrastructure (jest.config.js, jest.setup.ts, 7 passing tests). `GET /api/admin/invitations` backend endpoint added. Sidebar updated with Invite link. Admin types overhauled to match backend sqlc models. |
 | 2026-05-20 | ✅ Invitation Status Flow | Invitations now created as `pending`, updated to `sent` on Resend success or `failed` on error. New enum values: `pending`, `failed`. `GET /api/admin/users` endpoint added with pagination. Admin users hook fixed to call `/api/admin/users`. Firebase UID string handling fixed (no longer parsed as UUID). 41 total backend tests pass, 0 lint issues. |
 | 2026-05-19 | 🏗️ Mobile Init | Mobile app scaffolded: Expo SDK 54 + NativeWind v5 (Tailwind v4) + Expo Router + Firebase Auth + TanStack Query + Axios. Route groups: `(auth)` (login, signup, verify-email, verify-phone) and `(app)` with bottom tabs (home, history, profile) + stack screens (request-advance, terms, survey). TypeScript types matching backend schema. ESLint + Jest config. `npm run lint` and `npm run typecheck` pass clean. |
+| 2026-05-20 | ✅ Backend Mobile Auth Endpoints | 4 new endpoints: `GET /api/auth/check-invite`, `POST /api/auth/send-email-otp`, `POST /api/auth/verify-email-otp`, `POST /api/auth/verify-phone-otp`. `email_otps` table migration (000006). sqlc queries for OTP storage. Auth handler with invitation check, OTP generation/validation, user creation + invitation acceptance. All tests pass, 0 lint issues. |
+| 2026-05-20 | ✅ Backend Fixes | `invitations.updated_at` migration (000005) — all UPDATE queries now set `updated_at = NOW()`. `invitations_update.sql` and `AcceptInvitation` queries updated. `AGENTS.md` updated: migrations must not use `IF NOT EXISTS` or `IF EXISTS` clauses. |
+| 2026-05-20 | ✅ Docs Overhaul | `docs/features/auth.md` rewritten with complete mobile auth flow, API specs, route structure, and implementation status. `AGENTS.md` updated: Next.js 16.2.6, React Native 0.81, Expo SDK 54. Mobile types fixed: `amount_xaf` as `number`, added `InvitationStatus` and `invited_by` field. Admin `Invitation` type updated with `invited_by` (TODO comment). |
 
 ---
 

@@ -17,10 +17,10 @@ bohikor2/
 │   ├── db/            # sqlc queries + migrations
 │   ├── migrations/    # golang-migrate SQL files
 │   └── go.mod
-├── admin/             # Next.js 15 dashboard (shadcn/ui + TanStack Query)
+├── admin/             # Next.js 16 dashboard (shadcn/ui + TanStack Query)
 │   ├── src/
 │   └── package.json
-└── mobile/            # Expo SDK 54 + React Native 0.85 (NativeWind)
+└── mobile/            # Expo SDK 54 + React Native 0.81 (NativeWind)
     ├── app/           # Expo Router file-based routes
     └── package.json
 ```
@@ -50,7 +50,7 @@ golangci-lint run
 go run cmd/server/main.go
 ```
 
-### Admin Dashboard (Next.js 15)
+### Admin Dashboard (Next.js 16)
 
 ```bash
 cd admin
@@ -83,7 +83,7 @@ npm run test          # Jest + RNTL
 - **`updated_at` column:** The database has no auto-update trigger. **Every `UPDATE` query must explicitly set `updated_at = NOW()`.**
 - **Timezone-sensitive logic:** All date-window checks (15th–end of month, daily throttling) must evaluate timestamps in `Africa/Douala` (WAT/UTC+1). Use `time.LoadLocation("Africa/Douala")` — never rely on server local time.
 - **sqlc:** All SQL queries live in `.sql` files under `db/queries/`. Run `go generate ./db/...` after any query change. Never manually edit generated Go code.
-- **Migrations:** Numbered sequentially (`000001_schema.sql`, `000002_seed_kill_switch.sql`, etc.). Never modify a migration that has been applied to production — always add a new one.
+- **Migrations:** Numbered sequentially (`000001_schema.sql`, `000002_seed_kill_switch.sql`, etc.). Never modify a migration that has been applied to production — always add a new one. **Never use `IF NOT EXISTS` or `IF EXISTS` clauses** — migrations must be deterministic and fail loudly if applied out of order or to an unexpected state.
 - **Environment variables:** Use `github.com/caarlos0/env` or similar. Never hardcode secrets. All config reads from env vars.
 
 ### TypeScript (Admin + Mobile)

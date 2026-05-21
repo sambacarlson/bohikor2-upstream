@@ -68,14 +68,24 @@ func New(cfg *config.Config) (*Server, error) {
 
 	authMiddleware := middleware.FirebaseAuth(fb.Auth)
 
-	// Public routes
+	// Public routes (no auth required)
 	router.GET("/health", healthHandler)
 
-	// Auth routes (protected by Firebase auth middleware)
+	// Mobile auth routes (public - no Firebase auth required)
+	authHandler := handler.NewAuthHandler(queries, emailClient)
 	authGroup := router.Group("/api/auth")
-	authGroup.Use(authMiddleware)
 	{
-		authGroup.POST("/verify", handleVerify(queries))
+		authGroup.GET("/check-invite", authHandler.CheckInvitation)
+		authGroup.POST("/send-email-otp", authHandler.SendEmailOTP)
+		authGroup.POST("/verify-email-otp", authHandler.VerifyEmailOTP)
+		authGroup.POST("/verify-phone-otp", authMiddleware, authHandler.VerifyPhoneOTP)
+	}
+
+	// Auth routes (protected by Firebase auth middleware)
+	authProtected := router.Group("/api/auth")
+	authProtected.Use(authMiddleware)
+	{
+		authProtected.POST("/verify", handleVerify(queries))
 	}
 
 	// Admin routes (protected by Firebase auth + admin role)

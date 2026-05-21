@@ -2,6 +2,8 @@ export type UserStatus = "active" | "suspended";
 
 export type RequestStatus = "initiated" | "pending" | "success" | "failed";
 
+export type InvitationStatus = "pending" | "sent" | "accepted" | "expired" | "revoked" | "failed";
+
 export interface User {
   id: string;
   email: string;
@@ -22,7 +24,7 @@ export interface User {
 export interface AdvanceRequest {
   id: string;
   user_id: string;
-  amount_xaf: string;
+  amount_xaf: number;
   status: RequestStatus;
   campay_payout_ref: string | null;
   failure_reason: string | null;
@@ -47,6 +49,15 @@ export interface Survey {
   satisfaction_score: number | null;
   feedback: string | null;
   created_at: string;
+}
+
+export interface Invitation {
+  id: string;
+  email: string;
+  status: InvitationStatus;
+  invited_by: string | null; // TODO: include in admin dashboard UI
+  sent_at: string;
+  accepted_at: string | null;
 }
 
 export interface KillSwitchState {

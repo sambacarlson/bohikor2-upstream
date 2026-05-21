@@ -2,7 +2,11 @@ import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { useAuth } from "@/src/providers/auth-provider";
 
 export default function ProfileScreen() {
-  const { user, signOut } = useAuth();
+  const { firebaseUser, backendUser, signOut } = useAuth();
+
+  const displayName = backendUser?.full_name || firebaseUser?.email || "Not signed in";
+  const email = backendUser?.email || firebaseUser?.email || "";
+  const phone = backendUser?.phone_number || "Not verified";
 
   return (
     <ScrollView className="flex-1 bg-gray-50">
@@ -15,28 +19,35 @@ export default function ProfileScreen() {
           <View className="items-center mb-4">
             <View className="w-16 h-16 rounded-full bg-blue-100 items-center justify-center mb-3">
               <Text className="text-2xl font-bold text-blue-600">
-                {user?.email?.charAt(0).toUpperCase() ?? "U"}
+                {displayName.charAt(0).toUpperCase()}
               </Text>
             </View>
             <Text className="text-lg font-semibold text-gray-900">
-              {user?.email ?? "Not signed in"}
+              {displayName}
             </Text>
+            {email ? (
+              <Text className="text-sm text-gray-500 mt-1">{email}</Text>
+            ) : null}
           </View>
-        </View>
-      </View>
 
-      <View className="px-6 mb-6">
-        <Text className="text-sm font-medium text-gray-500 mb-2">Account</Text>
-        <View className="bg-white rounded-xl shadow-sm overflow-hidden">
-          <TouchableOpacity className="px-4 py-4 border-b border-gray-100">
-            <Text className="text-base text-gray-700">Phone Verification</Text>
-          </TouchableOpacity>
-          <TouchableOpacity className="px-4 py-4 border-b border-gray-100">
-            <Text className="text-base text-gray-700">Terms & Conditions</Text>
-          </TouchableOpacity>
-          <TouchableOpacity className="px-4 py-4">
-            <Text className="text-base text-gray-700">Privacy Policy</Text>
-          </TouchableOpacity>
+          <View className="mt-4 pt-4 border-t border-gray-100">
+            <View className="flex-row justify-between">
+              <Text className="text-sm text-gray-500">Phone</Text>
+              <Text className="text-sm text-gray-900">{phone}</Text>
+            </View>
+            <View className="flex-row justify-between mt-2">
+              <Text className="text-sm text-gray-500">Email verified</Text>
+              <Text className="text-sm text-gray-900">
+                {backendUser?.email_verified ? "Yes" : "No"}
+              </Text>
+            </View>
+            <View className="flex-row justify-between mt-2">
+              <Text className="text-sm text-gray-500">Phone verified</Text>
+              <Text className="text-sm text-gray-900">
+                {backendUser?.phone_verified ? "Yes" : "No"}
+              </Text>
+            </View>
+          </View>
         </View>
       </View>
 

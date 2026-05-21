@@ -6,5 +6,5 @@ INSERT INTO invitations (email, invited_by, sent_at)
 VALUES ($1, $2, $3) RETURNING *;
 
 -- name: AcceptInvitation :one
-UPDATE invitations SET status = 'accepted', accepted_at = NOW()
+UPDATE invitations SET status = 'accepted', accepted_at = NOW(), updated_at = NOW()
 WHERE email = $1 RETURNING *;
