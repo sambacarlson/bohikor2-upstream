@@ -10,10 +10,7 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
-import {
-  signInWithPhoneNumber,
-  type ConfirmationResult,
-} from "firebase/auth";
+import { type FirebaseAuthTypes } from "@react-native-firebase/auth";
 import { auth } from "@/src/lib/firebase";
 import { useVerifyPhoneOTP } from "@/src/hooks/use-auth";
 
@@ -25,7 +22,7 @@ export default function VerifyPhoneScreen() {
   const [step, setStep] = useState<"phone" | "otp">("phone");
   const [error, setError] = useState("");
   const [confirmationResult, setConfirmationResult] =
-    useState<ConfirmationResult | null>(null);
+    useState<FirebaseAuthTypes.ConfirmationResult | null>(null);
 
   const verifyPhoneOTP = useVerifyPhoneOTP();
 
@@ -47,10 +44,7 @@ export default function VerifyPhoneScreen() {
     }
 
     try {
-      const result = await signInWithPhoneNumber(
-        auth,
-        phoneNumber.trim()
-      );
+      const result = await auth.signInWithPhoneNumber(phoneNumber.trim());
       setConfirmationResult(result);
       setStep("otp");
     } catch (err: unknown) {
@@ -92,6 +86,7 @@ export default function VerifyPhoneScreen() {
       await verifyPhoneOTP.mutateAsync({ email, phoneNumber: phoneNumber.trim() });
       router.replace("/(app)/(tabs)/home");
     } catch (err: unknown) {
+      console.log("err2=====: ", err);
       if (
         err &&
         typeof err === "object" &&

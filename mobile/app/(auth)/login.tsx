@@ -9,10 +9,7 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
-import {
-  signInWithPhoneNumber,
-  type ConfirmationResult,
-} from "firebase/auth";
+import { type FirebaseAuthTypes } from "@react-native-firebase/auth";
 import { auth } from "@/src/lib/firebase";
 
 export default function LoginScreen() {
@@ -22,7 +19,7 @@ export default function LoginScreen() {
   const [loginStep, setLoginStep] = useState<"phone" | "otp">("phone");
   const [loginOtp, setLoginOtp] = useState("");
   const [confirmationResult, setConfirmationResult] =
-    useState<ConfirmationResult | null>(null);
+    useState<FirebaseAuthTypes.ConfirmationResult | null>(null);
   const [loginError, setLoginError] = useState("");
 
   const isValidPhone = (phone: string) => /^\+[1-9]\d{6,14}$/.test(phone);
@@ -38,7 +35,7 @@ export default function LoginScreen() {
       return;
     }
     try {
-      const result = await signInWithPhoneNumber(auth, loginPhone.trim());
+      const result = await auth.signInWithPhoneNumber(loginPhone.trim());
       setConfirmationResult(result);
       setLoginStep("otp");
     } catch (err: unknown) {
