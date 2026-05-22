@@ -1,57 +1,95 @@
 package campay
 
 import (
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/shopspring/decimal"
 )
 
+func signJWT(secret string, claims jwt.Claims) string {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	signed, _ := token.SignedString([]byte(secret))
+	return signed
+}
+
 func TestVerifyWebhook_Valid(t *testing.T) {
 	secret := "test-secret"
-	payload := []byte(`{"reference":"ref-123","status":"success"}`)
-
-	mac := hmac.New(sha256.New, []byte(secret))
-	mac.Write(payload)
-	signature := hex.EncodeToString(mac.Sum(nil))
+	claims := jwt.MapClaims{
+		"source": "CamPay",
+		"exp":    time.Now().Add(1 * time.Hour).Unix(),
+		"iat":    time.Now().Unix(),
+		"nbf":    time.Now().Unix(),
+	}
+	token := signJWT(secret, claims)
 
 	client := NewClient("token-abc", "http://localhost", secret)
-	if !client.VerifyWebhook(payload, signature) {
-		t.Fatal("expected valid signature verification")
+	if !client.VerifyWebhook(token) {
+		t.Fatal("expected valid JWT to verify")
 	}
 }
 
 func TestVerifyWebhook_Invalid(t *testing.T) {
-	secret := "test-secret"
-	payload := []byte(`{"reference":"ref-123","status":"success"}`)
-
-	client := NewClient("token-abc", "http://localhost", secret)
-	if client.VerifyWebhook(payload, "invalid-signature") {
-		t.Fatal("expected invalid signature to fail")
+	client := NewClient("token-abc", "http://localhost", "secret")
+	if client.VerifyWebhook("not-a-valid-jwt") {
+		t.Fatal("expected invalid JWT to fail")
 	}
 }
 
 func TestVerifyWebhook_WrongSecret(t *testing.T) {
-	payload := []byte(`{"reference":"ref-123","status":"success"}`)
-
-	mac := hmac.New(sha256.New, []byte("correct-secret"))
-	mac.Write(payload)
-	signature := hex.EncodeToString(mac.Sum(nil))
+	claims := jwt.MapClaims{
+		"source": "CamPay",
+		"exp":    time.Now().Add(1 * time.Hour).Unix(),
+		"iat":    time.Now().Unix(),
+		"nbf":    time.Now().Unix(),
+	}
+	token := signJWT("correct-secret", claims)
 
 	client := NewClient("token-abc", "http://localhost", "wrong-secret")
-	if client.VerifyWebhook(payload, signature) {
-		t.Fatal("expected signature from different secret to fail")
+	if client.VerifyWebhook(token) {
+		t.Fatal("expected JWT signed with different secret to fail")
+	}
+}
+
+func TestVerifyWebhook_Expired(t *testing.T) {
+	secret := "test-secret"
+	claims := jwt.MapClaims{
+		"source": "CamPay",
+		"exp":    time.Now().Add(-1 * time.Hour).Unix(),
+		"iat":    time.Now().Add(-2 * time.Hour).Unix(),
+		"nbf":    time.Now().Add(-2 * time.Hour).Unix(),
+	}
+	token := signJWT(secret, claims)
+
+	client := NewClient("token-abc", "http://localhost", secret)
+	if client.VerifyWebhook(token) {
+		t.Fatal("expected expired JWT to fail")
+	}
+}
+
+func TestVerifyWebhook_WrongSource(t *testing.T) {
+	secret := "test-secret"
+	claims := jwt.MapClaims{
+		"source": "Other",
+		"exp":    time.Now().Add(1 * time.Hour).Unix(),
+		"iat":    time.Now().Unix(),
+		"nbf":    time.Now().Unix(),
+	}
+	token := signJWT(secret, claims)
+
+	client := NewClient("token-abc", "http://localhost", secret)
+	if client.VerifyWebhook(token) {
+		t.Fatal("expected JWT with wrong source to fail")
 	}
 }
 
 func TestInitiateTransfer_Success(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/transfer/" {
+		if r.URL.Path != "/withdraw/" {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
@@ -62,7 +100,10 @@ func TestInitiateTransfer_Success(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(TransferResponse{
 			Reference: "campay-ref-123",
-			Status:    "success",
+			Status:    "SUCCESSFUL",
+			Amount:    10000,
+			Currency:  "XAF",
+			Operator:  "MTN",
 		})
 	}))
 	defer ts.Close()
@@ -75,21 +116,21 @@ func TestInitiateTransfer_Success(t *testing.T) {
 	if resp.Reference != "campay-ref-123" {
 		t.Fatalf("expected reference campay-ref-123, got %s", resp.Reference)
 	}
-	if resp.Status != "success" {
-		t.Fatalf("expected status success, got %s", resp.Status)
+	if resp.Status != "SUCCESSFUL" {
+		t.Fatalf("expected status SUCCESSFUL, got %s", resp.Status)
 	}
 }
 
 func TestInitiateTransfer_Pending(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/transfer/" {
+		if r.URL.Path != "/withdraw/" {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(TransferResponse{
 			Reference: "campay-ref-pending",
-			Status:    "pending",
+			Status:    "PENDING",
 		})
 	}))
 	defer ts.Close()
@@ -99,8 +140,8 @@ func TestInitiateTransfer_Pending(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if resp.Status != "pending" {
-		t.Fatalf("expected status pending, got %s", resp.Status)
+	if resp.Status != "PENDING" {
+		t.Fatalf("expected status PENDING, got %s", resp.Status)
 	}
 }
 
@@ -147,11 +188,15 @@ func TestNewClient(t *testing.T) {
 
 func TestInitiateTransfer_CampayFailureStatus(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/withdraw/" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(TransferResponse{
 			Reference: "ref-fail",
-			Status:    "failed",
+			Status:    "FAILED",
 			Message:   "insufficient balance",
 		})
 	}))

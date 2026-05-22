@@ -246,7 +246,7 @@ func TestCreateRequest_TransferSuccess(t *testing.T) {
 	transferMock := &mockCampayTransferer{
 		resp: &campay.TransferResponse{
 			Reference: "campay-ref-success",
-			Status:    "success",
+			Status:    "SUCCESSFUL",
 		},
 	}
 	h := NewAdvanceHandler(q, transferMock, decimal.NewFromInt(10000))
@@ -286,7 +286,7 @@ func TestCreateRequest_TransferPending(t *testing.T) {
 	transferMock := &mockCampayTransferer{
 		resp: &campay.TransferResponse{
 			Reference: "campay-ref-pending",
-			Status:    "pending",
+			Status:    "PENDING",
 		},
 	}
 	h := NewAdvanceHandler(q, transferMock, decimal.NewFromInt(10000))
@@ -309,7 +309,7 @@ func TestCreateRequest_TransferPending(t *testing.T) {
 
 	data := mustUnmarshalData(t, w.Body.Bytes())
 	if data["status"] != string(db.RequestStatusPending) {
-		t.Fatalf("expected status pending, got %v", data["status"])
+		t.Fatalf("expected status PENDING, got %v", data["status"])
 	}
 }
 
@@ -387,7 +387,7 @@ func TestCreateRequest_RequireActiveUser_ShouldBeEnforcedByMiddleware(t *testing
 	transferMock := &mockCampayTransferer{
 		resp: &campay.TransferResponse{
 			Reference: "campay-ref",
-			Status:    "success",
+			Status:    "SUCCESSFUL",
 		},
 	}
 	h := NewAdvanceHandler(q, transferMock, decimal.NewFromInt(10000))
@@ -562,11 +562,11 @@ type mockWebhookVerifier struct {
 	valid bool
 }
 
-func (m *mockWebhookVerifier) VerifyWebhook(payload []byte, signature string) bool {
+func (m *mockWebhookVerifier) VerifyWebhook(token string) bool {
 	return m.valid
 }
 
-func TestWebhook_MissingSignature(t *testing.T) {
+func TestWebhook_MissingSignatureField(t *testing.T) {
 	v := &mockWebhookVerifier{valid: false}
 	q := &mockWebhookQuerier{}
 	h := NewWebhookHandler(q, v)
@@ -576,7 +576,7 @@ func TestWebhook_MissingSignature(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequestWithContext(context.Background(), "POST", "/api/webhooks/campay",
-		strings.NewReader(`{"reference":"ref-1","status":"success"}`))
+		strings.NewReader(`{"reference":"ref-1","status":"SUCCESSFUL"}`))
 	req.Header.Set("Content-Type", "application/json")
 	r.ServeHTTP(w, req)
 
@@ -585,7 +585,7 @@ func TestWebhook_MissingSignature(t *testing.T) {
 	}
 }
 
-func TestWebhook_InvalidHMAC(t *testing.T) {
+func TestWebhook_InvalidSignature(t *testing.T) {
 	v := &mockWebhookVerifier{valid: false}
 	q := &mockWebhookQuerier{}
 	h := NewWebhookHandler(q, v)
@@ -595,9 +595,8 @@ func TestWebhook_InvalidHMAC(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequestWithContext(context.Background(), "POST", "/api/webhooks/campay",
-		strings.NewReader(`{"reference":"ref-1","status":"success"}`))
+		strings.NewReader(`{"reference":"ref-1","status":"SUCCESSFUL","signature":"invalid-jwt"}`))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Campay-Signature", "invalid-hmac")
 	r.ServeHTTP(w, req)
 
 	if w.Code != http.StatusUnauthorized {
@@ -624,9 +623,8 @@ func TestWebhook_SuccessStatus(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequestWithContext(context.Background(), "POST", "/api/webhooks/campay",
-		strings.NewReader(`{"reference":"ref-1","status":"success"}`))
+		strings.NewReader(`{"reference":"ref-1","status":"SUCCESSFUL","signature":"valid-jwt"}`))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Campay-Signature", "valid-hmac")
 	r.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
@@ -653,9 +651,8 @@ func TestWebhook_FailedStatus(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequestWithContext(context.Background(), "POST", "/api/webhooks/campay",
-		strings.NewReader(`{"reference":"ref-1","status":"failed","message":"insufficient balance"}`))
+		strings.NewReader(`{"reference":"ref-1","status":"FAILED","signature":"valid-jwt","reason":"insufficient balance"}`))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Campay-Signature", "valid-hmac")
 	r.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
@@ -673,9 +670,8 @@ func TestWebhook_UnknownReference(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequestWithContext(context.Background(), "POST", "/api/webhooks/campay",
-		strings.NewReader(`{"reference":"unknown-ref","status":"success"}`))
+		strings.NewReader(`{"reference":"unknown-ref","status":"SUCCESSFUL","signature":"valid-jwt"}`))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Campay-Signature", "valid-hmac")
 	r.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
@@ -693,9 +689,8 @@ func TestWebhook_EmptyReference(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequestWithContext(context.Background(), "POST", "/api/webhooks/campay",
-		strings.NewReader(`{"reference":"","status":"success"}`))
+		strings.NewReader(`{"reference":"","status":"SUCCESSFUL","signature":"valid-jwt"}`))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Campay-Signature", "valid-hmac")
 	r.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
@@ -715,7 +710,6 @@ func TestWebhook_InvalidJSON(t *testing.T) {
 	req, _ := http.NewRequestWithContext(context.Background(), "POST", "/api/webhooks/campay",
 		strings.NewReader(`not json`))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Campay-Signature", "valid-hmac")
 	r.ServeHTTP(w, req)
 
 	if w.Code != http.StatusBadRequest {

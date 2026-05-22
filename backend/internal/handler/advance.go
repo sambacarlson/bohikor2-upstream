@@ -157,7 +157,7 @@ func (h *AdvanceHandler) CreateRequest(c *gin.Context) {
 	}
 
 	var finalStatus db.RequestStatus
-	if transferResp.Status == "pending" || transferResp.Status == "PENDING" {
+	if transferResp.Status == "PENDING" {
 		finalStatus = db.RequestStatusPending
 	} else {
 		finalStatus = db.RequestStatusSuccess
@@ -175,7 +175,7 @@ func (h *AdvanceHandler) CreateRequest(c *gin.Context) {
 		newReq = updated
 	}
 
-	if transferResp.Status == "pending" || transferResp.Status == "PENDING" {
+	if transferResp.Status == "PENDING" {
 		eventMeta, _ := json.Marshal(map[string]interface{}{
 			"request_id": newReq.ID,
 			"campay_ref": transferResp.Reference,
@@ -261,7 +261,7 @@ type webhookQuerier interface {
 }
 
 type webhookVerifier interface {
-	VerifyWebhook(payload []byte, signature string) bool
+	VerifyWebhook(token string) bool
 }
 
 type webhookHandler struct {
@@ -274,60 +274,60 @@ func NewWebhookHandler(queries webhookQuerier, campayClient webhookVerifier) *we
 }
 
 func (h *webhookHandler) HandleCampayWebhook(c *gin.Context) {
-	signature := c.GetHeader("X-Campay-Signature")
-	if signature == "" {
-		JSONError(c, http.StatusBadRequest, "missing_signature", "missing Campay signature header")
-		return
-	}
-
 	payload, err := c.GetRawData()
 	if err != nil {
+		slog.Error("webhook read body", "error", err)
 		JSONError(c, http.StatusBadRequest, "invalid_payload", "failed to read request body")
 		return
 	}
 
-	if !h.campayClient.VerifyWebhook(payload, signature) {
-		JSONError(c, http.StatusUnauthorized, "invalid_signature", "HMAC verification failed")
-		return
-	}
-
-	var webhook campay.WebhookPayload
-	if err := json.Unmarshal(payload, &webhook); err != nil {
+	var wh campay.WebhookPayload
+	if err := json.Unmarshal(payload, &wh); err != nil {
 		JSONError(c, http.StatusBadRequest, "invalid_payload", "invalid webhook body")
 		return
 	}
 
+	if wh.Signature == "" {
+		JSONError(c, http.StatusBadRequest, "missing_signature", "webhook body missing signature field")
+		return
+	}
+
+	if !h.campayClient.VerifyWebhook(wh.Signature) {
+		JSONError(c, http.StatusUnauthorized, "invalid_signature", "JWT signature verification failed")
+		return
+	}
+
 	slog.Info("campay webhook received",
-		"reference", webhook.Reference,
-		"status", webhook.Status,
+		"reference", wh.Reference,
+		"status", wh.Status,
 	)
 
-	if webhook.Reference == "" {
+	if wh.Reference == "" {
 		JSONOK(c, http.StatusOK)
 		return
 	}
 
-	existing, err := h.queries.GetAdvanceRequestByCampayRef(c.Request.Context(), pgtype.Text{String: webhook.Reference, Valid: true})
+	existing, err := h.queries.GetAdvanceRequestByCampayRef(c.Request.Context(), pgtype.Text{String: wh.Reference, Valid: true})
 	if err != nil {
-		slog.Warn("webhook for unknown reference", "reference", webhook.Reference)
+		slog.Warn("webhook for unknown reference", "reference", wh.Reference)
 		JSONOK(c, http.StatusOK)
 		return
 	}
 
 	var newStatus db.RequestStatus
 	var failureReason pgtype.Text
-	switch webhook.Status {
-	case "success", "SUCCESS":
+	switch wh.Status {
+	case "SUCCESSFUL":
 		newStatus = db.RequestStatusSuccess
-	case "failed", "FAILED":
+	case "FAILED":
 		newStatus = db.RequestStatusFailed
-		if webhook.Message != "" {
-			failureReason = pgtype.Text{String: webhook.Message, Valid: true}
+		if wh.Reason != "" && wh.Reason != "None" {
+			failureReason = pgtype.Text{String: wh.Reason, Valid: true}
 		}
-	case "pending", "PENDING":
+	case "PENDING":
 		newStatus = db.RequestStatusPending
 	default:
-		slog.Warn("unknown webhook status", "status", webhook.Status, "reference", webhook.Reference)
+		slog.Warn("unknown webhook status", "status", wh.Status, "reference", wh.Reference)
 		JSONOK(c, http.StatusOK)
 		return
 	}
@@ -342,7 +342,7 @@ func (h *webhookHandler) HandleCampayWebhook(c *gin.Context) {
 		PayoutDurationSeconds: pgtype.Int4{Int32: elapsed, Valid: true},
 	})
 	if err != nil {
-		slog.Error("update request status from webhook", "error", err, "reference", webhook.Reference)
+		slog.Error("update request status from webhook", "error", err, "reference", wh.Reference)
 		JSONError(c, http.StatusInternalServerError, "internal_error", "failed to update request")
 		return
 	}
@@ -350,7 +350,7 @@ func (h *webhookHandler) HandleCampayWebhook(c *gin.Context) {
 	userID := pgtype.UUID{Bytes: existing.UserID, Valid: true}
 	eventMeta, _ := json.Marshal(map[string]interface{}{
 		"request_id":              existing.ID.String(),
-		"campay_ref":              webhook.Reference,
+		"campay_ref":              wh.Reference,
 		"payout_duration_seconds": elapsed,
 	})
 	switch newStatus {

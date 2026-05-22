@@ -8,7 +8,7 @@ Salary advance pilot app. See `docs/brief.md` for business rules and `docs/schem
 - **Admin:** Next.js 16, shadcn/ui, Tailwind v4, TanStack Query, Firebase Auth
 - **Mobile:** Expo SDK 54, React Native 0.81, NativeWind, TanStack Query, `@react-native-firebase/app` + `@react-native-firebase/auth`
 - **Database:** PostgreSQL 17 (Neon/Supabase)
-- **Payments:** Campay Transfer API (sandbox: `https://demo.campay.net/api`)
+- **Payments:** Campay Withdraw API (`POST /withdraw/`, sandbox: `https://demo.campay.net/api`)
 - **Testing:** Go `testing`, Jest + RTL (admin), Jest + RNTL (mobile)
 
 ## Repo Structure
@@ -88,9 +88,9 @@ Mobile requires a dev client build (`npx expo run:android/ios`) — Expo Go does
 
 1. User taps "Request Advance" → confirmation modal
 2. Backend checks: user active, terms accepted, no in-flight request
-3. `POST /api/advance-requests` → creates request, calls Campay Transfer API
+3. `POST /api/advance-requests` → creates request, calls Campay Withdraw API (`POST /withdraw/`)
 4. Campay processes → sends webhook to `POST /api/webhooks/campay`
-5. Backend verifies HMAC, updates request status
+5. Backend verifies JWT signature, updates request status
 6. User sees status in transaction history
 
 **Terms:** Must be accepted before requesting. Separate screen from auth. Stored on `users.is_terms_accepted`.
@@ -125,7 +125,7 @@ Every PR must pass lint + typecheck + tests for the changed workspace(s).
 - Never commit secrets or Firebase service account JSON
 - Use environment variables for all config (`.env.example` files with dummy values)
 - Admin endpoints require Firebase Auth ID token via `firebase-admin-go`
-- Campay webhooks must be HMAC-verified before processing
+- Campay webhooks must be JWT-verified (HS256, signature in body) before processing
 
 ## Rules
 

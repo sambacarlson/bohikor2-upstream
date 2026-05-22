@@ -26,10 +26,10 @@
 
 **3. Backend — Campay client**
 - Create `internal/campay/client.go`:
-  - `NewClient(username, password, baseURL, webhookSecret)`
-  - `InitiateTransfer(phoneNumber, amount, description)` — POST to Campay Transfer API
-  - `VerifyWebhook(payload, signature)` — HMAC-SHA256 verification using `CAMPAY_WEBHOOK_SECRET`
-- Add Campay config fields to `internal/config/config.go` (already present: `CampayAPIUsername`, `CampayAPIPassword`, `CampayWebhookSecret`, `CampayBaseURL`)
+  - `NewClient(permanentToken, baseURL, webhookSecret)`
+  - `InitiateTransfer(phoneNumber, amount, description)` — POST to `POST /withdraw/`
+  - `VerifyWebhook(token)` — JWT HS256 verification using `CAMPAY_WEBHOOK_SECRET`
+- Add Campay config fields to `internal/config/config.go`: `CampayPermanentAccessToken`, `CampayWebhookSecret`, `CampayBaseURL`
 - Wire client into `server.New()`
 
 **4. Backend — Handlers & routes**
@@ -37,7 +37,7 @@
   - `POST /api/advance-requests` — create request, call Campay, return request
   - `GET /api/advance-requests` — user's own request history (uses `RequireActiveUser` middleware)
   - `GET /api/admin/requests` — admin view (uses `RequireAdmin` middleware)
-  - `POST /api/webhooks/campay` — public endpoint, verify HMAC, update request status
+   - `POST /api/webhooks/campay` — public endpoint, verify JWT signature, update request status
 - Wire routes in `server/server.go`:
   - Public: `POST /api/webhooks/campay`
   - User-protected: `POST /api/advance-requests`, `GET /api/advance-requests`
@@ -45,9 +45,9 @@
 
 **5. Backend — Business logic**
 - Before creating request: check user is active, has `is_terms_accepted = true`, no existing request with status `initiated` or `pending`
-- On request creation: set `status = 'initiated'`, call Campay Transfer API
-- On Campay success: set `status = 'success'`, record `payout_duration_seconds`
-- On Campay failure: set `status = 'failed'`, record `failure_reason`
+- On request creation: set `status = 'initiated'`, call Campay Withdraw API (`POST /withdraw/`)
+- On Campay success (status `SUCCESSFUL`): set `status = 'success'`, record `payout_duration_seconds`
+- On Campay failure (status `FAILED`): set `status = 'failed'`, record `failure_reason`
 - Log `request_initiated`, `payout_success`, `payout_failed` events to `events` table
 
 **6. Mobile — Terms screen**

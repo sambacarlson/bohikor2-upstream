@@ -21,9 +21,9 @@ Users who have completed authentication (Epic 1) can now request an advance and 
 2. Confirmation modal: informs user that advance + charges will be deducted from salary per terms
 3. Backend checks: user exists, is active, has accepted terms, no active request in progress
 4. Request created with `status = 'initiated'`
-5. Backend calls Campay Transfer API to send 10,000 XAF to user's phone number
+5. Backend calls Campay Withdraw API (`POST /withdraw/`) to send 10,000 XAF to user's phone number
 6. Campay processes payout → sends webhook to backend
-7. Backend verifies webhook HMAC signature, updates request status (`pending` → `success` or `failed`)
+7. Backend verifies webhook JWT signature (HS256, embedded in body), updates request status (`pending` → `SUCCESSFUL` or `FAILED`)
 8. User sees request in transaction history with live status
 
 ### Eligibility (for now)
@@ -51,9 +51,10 @@ Users who have completed authentication (Epic 1) can now request an advance and 
 
 ## Campay Integration
 
-- **Transfer API** — send money to user's mobile money wallet
-- **Webhook** — receive payout status updates
-- **HMAC verification** — verify webhook signatures using `CAMPAY_WEBHOOK_SECRET`
+- **Withdraw API** (`POST /withdraw/`) — send money to user's mobile money wallet (status: `SUCCESSFUL`, `FAILED`, `PENDING`)
+- **Webhook** — receive payout status updates (JWT HS256 signed, embedded as `signature` field in body)
+- **JWT verification** — verify webhook signatures using `CAMPAY_WEBHOOK_SECRET` via `golang-jwt`
+- **Auth** — permanent access token (`Authorization: Token <token>`)
 - All credentials configured in backend `.env`
 
 ## Future (Deferred)

@@ -3,9 +3,6 @@ package campay
 import (
 	"bytes"
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,6 +10,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/shopspring/decimal"
 )
 
@@ -31,15 +29,35 @@ type TransferRequest struct {
 }
 
 type TransferResponse struct {
-	Reference string `json:"reference"`
-	Status    string `json:"status"`
-	Message   string `json:"message,omitempty"`
+	Reference         string  `json:"reference"`
+	Status            string  `json:"status"`
+	Message           string  `json:"message,omitempty"`
+	Amount            float64 `json:"amount,omitempty"`
+	Currency          string  `json:"currency,omitempty"`
+	Operator          string  `json:"operator,omitempty"`
+	Code              string  `json:"code,omitempty"`
+	OperatorReference string  `json:"operator_reference,omitempty"`
 }
 
 type WebhookPayload struct {
-	Reference string `json:"reference"`
-	Status    string `json:"status"`
-	Message   string `json:"message,omitempty"`
+	Reference         string `json:"reference"`
+	Status            string `json:"status"`
+	Amount            string `json:"amount"`
+	Currency          string `json:"currency"`
+	Operator          string `json:"operator"`
+	Code              string `json:"code"`
+	OperatorReference string `json:"operator_reference"`
+	Endpoint          string `json:"endpoint"`
+	Signature         string `json:"signature"`
+	ExternalReference string `json:"external_reference"`
+	PhoneNumber       string `json:"phone_number"`
+	Description       string `json:"description"`
+	Reason            string `json:"reason"`
+}
+
+type campayClaims struct {
+	jwt.StandardClaims
+	Source string `json:"source"`
 }
 
 func NewClient(permanentToken, baseURL, webhookSecret string) *Client {
@@ -63,7 +81,7 @@ func (c *Client) InitiateTransfer(ctx context.Context, phoneNumber string, amoun
 		return nil, fmt.Errorf("marshal transfer request: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/transfer/", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/withdraw/", bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("create transfer request: %w", err)
 	}
@@ -101,16 +119,28 @@ func (c *Client) InitiateTransfer(ctx context.Context, phoneNumber string, amoun
 		return nil, fmt.Errorf("unmarshal transfer response: %w", err)
 	}
 
-	if tr.Status == "failed" || tr.Status == "error" {
+	if tr.Status == "FAILED" {
 		return &tr, fmt.Errorf("transfer failed: %s", tr.Message)
 	}
 
 	return &tr, nil
 }
 
-func (c *Client) VerifyWebhook(payload []byte, signature string) bool {
-	mac := hmac.New(sha256.New, []byte(c.webhookSecret))
-	mac.Write(payload)
-	expected := hex.EncodeToString(mac.Sum(nil))
-	return hmac.Equal([]byte(expected), []byte(signature))
+func (c *Client) VerifyWebhook(token string) bool {
+	claims := &campayClaims{}
+	_, err := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(c.webhookSecret), nil
+	})
+	if err != nil {
+		slog.Warn("webhook JWT verification failed", "error", err)
+		return false
+	}
+	if claims.Source != "CamPay" {
+		slog.Warn("webhook invalid source claim", "source", claims.Source)
+		return false
+	}
+	return true
 }
