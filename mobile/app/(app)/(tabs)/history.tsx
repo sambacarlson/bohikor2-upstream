@@ -82,8 +82,11 @@ export default function HistoryScreen() {
 
   return (
     <ScrollView className="flex-1 bg-gray-50">
-      <View className="px-6 pt-12 pb-6">
+      <View className="px-6 pt-12 pb-6 flex-row items-center justify-between">
         <Text className="text-2xl font-bold text-gray-900">Transaction History</Text>
+        <TouchableOpacity onPress={() => refetch()} className="bg-blue-600 rounded-lg px-4 py-2">
+          <Text className="text-white font-semibold text-sm">Refresh</Text>
+        </TouchableOpacity>
       </View>
 
       <View className="px-6 mb-6">

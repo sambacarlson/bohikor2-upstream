@@ -17,15 +17,19 @@ import { useVerifyPhoneOTP } from "@/src/hooks/use-auth";
 export default function VerifyPhoneScreen() {
   const router = useRouter();
   const { email } = useLocalSearchParams<{ email: string }>();
+  const [countryCode, setCountryCode] = useState("+237");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [step, setStep] = useState<"phone" | "otp">("phone");
   const [error, setError] = useState("");
   const [confirmationResult, setConfirmationResult] =
     useState<FirebaseAuthTypes.ConfirmationResult | null>(null);
+  const [sendingFirebase, setSendingFirebase] = useState(false);
+  const [verifyingFirebase, setVerifyingFirebase] = useState(false);
 
   const verifyPhoneOTP = useVerifyPhoneOTP();
 
+  const fullPhone = `${countryCode}${phoneNumber}`;
   const isValidPhone = (phone: string) => {
     return /^\+[1-9]\d{6,14}$/.test(phone);
   };
@@ -38,13 +42,14 @@ export default function VerifyPhoneScreen() {
       return;
     }
 
-    if (!isValidPhone(phoneNumber.trim())) {
-      setError("Enter phone number with country code (e.g., +2376XXXXXXXX)");
+    if (!isValidPhone(fullPhone)) {
+      setError("Enter a valid phone number with country code (e.g., +237 6XXXXXXXX)");
       return;
     }
 
+    setSendingFirebase(true);
     try {
-      const result = await auth.signInWithPhoneNumber(phoneNumber.trim());
+      const result = await auth.signInWithPhoneNumber(fullPhone);
       setConfirmationResult(result);
       setStep("otp");
     } catch (err: unknown) {
@@ -58,6 +63,8 @@ export default function VerifyPhoneScreen() {
       } else {
         setError("Failed to send verification code. Please try again.");
       }
+    } finally {
+      setSendingFirebase(false);
     }
   };
 
@@ -74,16 +81,19 @@ export default function VerifyPhoneScreen() {
       return;
     }
 
+    setVerifyingFirebase(true);
     try {
       await confirmationResult.confirm(otpCode);
     } catch {
       setError("Invalid code. Please try again.");
       setOtpCode("");
+      setVerifyingFirebase(false);
       return;
     }
+    setVerifyingFirebase(false);
 
     try {
-      await verifyPhoneOTP.mutateAsync({ email, phoneNumber: phoneNumber.trim() });
+      await verifyPhoneOTP.mutateAsync({ email, phoneNumber: fullPhone });
       router.replace("/(app)/(tabs)/home");
     } catch (err: unknown) {
       console.log("err2=====: ", err);
@@ -124,29 +134,40 @@ export default function VerifyPhoneScreen() {
               <Text className="text-gray-700 mb-2 font-medium">
                 Phone number
               </Text>
-              <TextInput
-                className="border border-gray-300 rounded-lg px-4 py-3 text-base"
-                placeholder="+2376XXXXXXXX"
-                keyboardType="phone-pad"
-                value={phoneNumber}
-                onChangeText={(text) => {
-                  setPhoneNumber(text);
-                  setError("");
-                }}
-                autoFocus
-              />
+              <View className="flex-row gap-2">
+                <TextInput
+                  className="border border-gray-300 rounded-lg px-3 py-3 text-base w-20 text-center"
+                  value={countryCode}
+                  onChangeText={(text) => {
+                    setCountryCode(text.startsWith("+") ? text : `+${text}`);
+                    setError("");
+                  }}
+                  keyboardType="phone-pad"
+                />
+                <TextInput
+                  className="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-base"
+                  placeholder="6XXXXXXXX"
+                  keyboardType="phone-pad"
+                  value={phoneNumber}
+                  onChangeText={(text) => {
+                    setPhoneNumber(text);
+                    setError("");
+                  }}
+                  autoFocus
+                />
+              </View>
 
               {error ? (
                 <Text className="text-red-500 mt-2 text-sm">{error}</Text>
               ) : null}
 
               <TouchableOpacity
-                className={`mt-6 rounded-lg py-4 items-center ${verifyPhoneOTP.isPending ? "bg-blue-300" : "bg-blue-600"
+                className={`mt-6 rounded-lg py-4 items-center flex-row justify-center ${verifyPhoneOTP.isPending || sendingFirebase ? "bg-blue-300" : "bg-blue-600"
                   }`}
                 onPress={handleSendCode}
-                disabled={verifyPhoneOTP.isPending}
+                disabled={verifyPhoneOTP.isPending || sendingFirebase}
               >
-                {verifyPhoneOTP.isPending ? (
+                {verifyPhoneOTP.isPending || sendingFirebase ? (
                   <ActivityIndicator color="white" />
                 ) : (
                   <Text className="text-white font-semibold text-base">
@@ -165,7 +186,7 @@ export default function VerifyPhoneScreen() {
               <Text className="text-gray-500 mt-2 text-center">
                 We sent a 6-digit code to{"\n"}
                 <Text className="font-medium text-gray-700">
-                  {phoneNumber}
+                  {fullPhone}
                 </Text>
               </Text>
             </View>
@@ -192,12 +213,12 @@ export default function VerifyPhoneScreen() {
               ) : null}
 
               <TouchableOpacity
-                className={`mt-6 rounded-lg py-4 items-center ${verifyPhoneOTP.isPending ? "bg-blue-300" : "bg-blue-600"
+                className={`mt-6 rounded-lg py-4 items-center flex-row justify-center ${verifyPhoneOTP.isPending || verifyingFirebase ? "bg-blue-300" : "bg-blue-600"
                   }`}
                 onPress={handleVerifyOTP}
-                disabled={verifyPhoneOTP.isPending || otpCode.length !== 6}
+                disabled={verifyPhoneOTP.isPending || verifyingFirebase || otpCode.length !== 6}
               >
-                {verifyPhoneOTP.isPending ? (
+                {verifyPhoneOTP.isPending || verifyingFirebase ? (
                   <ActivityIndicator color="white" />
                 ) : (
                   <Text className="text-white font-semibold text-base">

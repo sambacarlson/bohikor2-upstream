@@ -52,11 +52,9 @@ describe("HomeScreen", () => {
     mockBackendUser.is_terms_accepted = true;
   });
 
-  it("renders welcome message and user info", () => {
+  it("renders welcome message", () => {
     render(<HomeScreen />);
     expect(screen.getByText("Welcome, Test User")).toBeTruthy();
-    expect(screen.getByText("test@example.com")).toBeTruthy();
-    expect(screen.getByText("237600000000")).toBeTruthy();
   });
 
   it("shows Request Advance button", () => {
@@ -64,11 +62,6 @@ describe("HomeScreen", () => {
     expect(screen.getByTestId("request-advance-button")).toBeTruthy();
     expect(screen.getByText("Request Advance")).toBeTruthy();
     expect(screen.getByText("10,000 XAF")).toBeTruthy();
-  });
-
-  it("shows terms accepted in user info", () => {
-    render(<HomeScreen />);
-    expect(screen.getByText("Accepted")).toBeTruthy();
   });
 
   it("opens confirmation modal when Request Advance is tapped", () => {

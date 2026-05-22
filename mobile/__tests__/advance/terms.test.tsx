@@ -29,6 +29,7 @@ jest.mock("@/src/providers/auth-provider", () => ({
     firebaseUser: null,
     loading: false,
     signOut: jest.fn(),
+    refreshBackendUser: jest.fn().mockResolvedValue(undefined),
   }),
 }));
 

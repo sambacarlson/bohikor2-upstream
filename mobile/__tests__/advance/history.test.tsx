@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react-native";
+import { render, screen, fireEvent } from "@testing-library/react-native";
 import HistoryScreen from "@/app/(app)/(tabs)/history";
 
 const mockRefetch = jest.fn();
@@ -67,6 +67,54 @@ describe("HistoryScreen", () => {
     render(<HistoryScreen />);
     expect(screen.getByText("10000.00 XAF")).toBeTruthy();
     expect(screen.getByText("success")).toBeTruthy();
+  });
+
+  it("shows refresh button", () => {
+    render(<HistoryScreen />);
+    expect(screen.getByText("Refresh")).toBeTruthy();
+  });
+
+  it("calls refetch when refresh button is pressed", () => {
+    render(<HistoryScreen />);
+    const refreshButton = screen.getByText("Refresh");
+    fireEvent.press(refreshButton);
+    expect(mockRefetch).toHaveBeenCalled();
+  });
+
+  it("renders pending status badge", () => {
+    mockData = [
+      {
+        id: "req-pending",
+        user_id: "user-1",
+        amount_xaf: "10000.00",
+        status: "pending",
+        campay_payout_ref: "campay-ref-1",
+        failure_reason: null,
+        payout_duration_seconds: null,
+        created_at: "2024-06-01T12:00:00Z",
+        updated_at: "2024-06-01T12:00:00Z",
+      },
+    ];
+    render(<HistoryScreen />);
+    expect(screen.getByText("pending")).toBeTruthy();
+  });
+
+  it("renders initiated status badge", () => {
+    mockData = [
+      {
+        id: "req-initiated",
+        user_id: "user-1",
+        amount_xaf: "10000.00",
+        status: "initiated",
+        campay_payout_ref: null,
+        failure_reason: null,
+        payout_duration_seconds: null,
+        created_at: "2024-06-01T12:00:00Z",
+        updated_at: "2024-06-01T12:00:00Z",
+      },
+    ];
+    render(<HistoryScreen />);
+    expect(screen.getByText("initiated")).toBeTruthy();
   });
 
   it("renders multiple requests", () => {

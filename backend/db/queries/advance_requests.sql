@@ -23,6 +23,13 @@ SELECT * FROM advance_requests
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
 
+-- name: ListAdvanceRequestsWithUser :many
+SELECT ar.*, u.email AS user_email
+FROM advance_requests ar
+JOIN users u ON ar.user_id = u.id
+ORDER BY ar.created_at DESC
+LIMIT $1 OFFSET $2;
+
 -- name: UpdateAdvanceRequestStatus :one
 UPDATE advance_requests SET
     status = $2,

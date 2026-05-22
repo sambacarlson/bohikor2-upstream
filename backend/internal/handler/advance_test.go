@@ -739,9 +739,10 @@ func TestHandleListAdminRequests_Empty(t *testing.T) {
 func TestHandleListAdminRequests_WithData(t *testing.T) {
 	reqID := uuid.New()
 	userID := uuid.New()
+	email := "user@example.com"
 	q := &mockAdminRequestsQuerier{
-		requests: []db.AdvanceRequest{
-			{ID: reqID, UserID: userID, Status: db.RequestStatusSuccess, CreatedAt: time.Now().UTC()},
+		requests: []db.ListAdvanceRequestsWithUserRow{
+			{ID: reqID, UserID: userID, Status: db.RequestStatusSuccess, UserEmail: email, CreatedAt: time.Now().UTC()},
 		},
 	}
 	r := makeTestGin()
@@ -762,16 +763,16 @@ func TestHandleListAdminRequests_WithData(t *testing.T) {
 }
 
 type mockAdminRequestsQuerier struct {
-	requests []db.AdvanceRequest
+	requests []db.ListAdvanceRequestsWithUserRow
 	err      error
 }
 
-func (m *mockAdminRequestsQuerier) ListAdvanceRequests(ctx context.Context, arg db.ListAdvanceRequestsParams) ([]db.AdvanceRequest, error) {
+func (m *mockAdminRequestsQuerier) ListAdvanceRequestsWithUser(ctx context.Context, arg db.ListAdvanceRequestsWithUserParams) ([]db.ListAdvanceRequestsWithUserRow, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
 	if m.requests == nil {
-		return []db.AdvanceRequest{}, nil
+		return []db.ListAdvanceRequestsWithUserRow{}, nil
 	}
 	return m.requests, nil
 }

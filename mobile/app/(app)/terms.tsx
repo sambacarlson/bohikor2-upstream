@@ -17,12 +17,13 @@ Please read these terms carefully before proceeding.`;
 export default function TermsScreen() {
   const [accepted, setAccepted] = useState(false);
   const router = useRouter();
-  const { backendUser } = useAuth();
+  const { backendUser, refreshBackendUser } = useAuth();
   const acceptTerms = useAcceptTerms();
 
   const handleAccept = async () => {
     try {
       await acceptTerms.mutateAsync({ version: "v1" });
+      await refreshBackendUser();
       router.back();
     } catch {
       // Error is handled by the mutation state

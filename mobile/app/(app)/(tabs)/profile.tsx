@@ -2,11 +2,13 @@ import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { useAuth } from "@/src/providers/auth-provider";
 
 export default function ProfileScreen() {
-  const { firebaseUser, backendUser, signOut } = useAuth();
+  const { backendUser, signOut } = useAuth();
 
-  const displayName = backendUser?.full_name || firebaseUser?.email || "Not signed in";
-  const email = backendUser?.email || firebaseUser?.email || "";
-  const phone = backendUser?.phone_number || "Not verified";
+  const email = backendUser?.email || "";
+  const phone = backendUser?.phone_number || "";
+  const emailVerified = backendUser?.email_verified ?? false;
+  const phoneVerified = backendUser?.phone_verified ?? false;
+  const termsAccepted = backendUser?.is_terms_accepted ?? false;
 
   return (
     <ScrollView className="flex-1 bg-gray-50">
@@ -16,35 +18,46 @@ export default function ProfileScreen() {
 
       <View className="px-6 mb-6">
         <View className="bg-white rounded-xl p-6 shadow-sm">
-          <View className="items-center mb-4">
-            <View className="w-16 h-16 rounded-full bg-blue-100 items-center justify-center mb-3">
-              <Text className="text-2xl font-bold text-blue-600">
-                {displayName.charAt(0).toUpperCase()}
-              </Text>
+          <Text className="text-lg font-semibold text-gray-900 mb-4">
+            Your Information
+          </Text>
+          <View className="space-y-3">
+            <View className="flex-row justify-between">
+              <Text className="text-sm text-gray-500">Email</Text>
+              <View className="flex-row items-center">
+                <Text className="text-sm text-gray-900">{email}</Text>
+                <Text className="text-sm ml-2">
+                  {emailVerified ? "✓" : "—"}
+                </Text>
+              </View>
             </View>
-            <Text className="text-lg font-semibold text-gray-900">
-              {displayName}
-            </Text>
-            {email ? (
-              <Text className="text-sm text-gray-500 mt-1">{email}</Text>
-            ) : null}
-          </View>
-
-          <View className="mt-4 pt-4 border-t border-gray-100">
             <View className="flex-row justify-between">
               <Text className="text-sm text-gray-500">Phone</Text>
-              <Text className="text-sm text-gray-900">{phone}</Text>
+              <View className="flex-row items-center">
+                <Text className="text-sm text-gray-900">{phone}</Text>
+                <Text className="text-sm ml-2">
+                  {phoneVerified ? "✓" : "—"}
+                </Text>
+              </View>
             </View>
-            <View className="flex-row justify-between mt-2">
-              <Text className="text-sm text-gray-500">Email verified</Text>
+            {backendUser?.full_name && (
+              <View className="flex-row justify-between">
+                <Text className="text-sm text-gray-500">Name</Text>
+                <Text className="text-sm text-gray-900">
+                  {backendUser.full_name}
+                </Text>
+              </View>
+            )}
+            <View className="flex-row justify-between">
+              <Text className="text-sm text-gray-500">Status</Text>
               <Text className="text-sm text-gray-900">
-                {backendUser?.email_verified ? "Yes" : "No"}
+                {backendUser?.status || "—"}
               </Text>
             </View>
-            <View className="flex-row justify-between mt-2">
-              <Text className="text-sm text-gray-500">Phone verified</Text>
+            <View className="flex-row justify-between">
+              <Text className="text-sm text-gray-500">Terms</Text>
               <Text className="text-sm text-gray-900">
-                {backendUser?.phone_verified ? "Yes" : "No"}
+                {termsAccepted ? "Accepted" : "Not accepted"}
               </Text>
             </View>
           </View>

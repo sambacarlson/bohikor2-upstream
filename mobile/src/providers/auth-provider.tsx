@@ -15,6 +15,7 @@ interface AuthContextType {
   backendUser: User | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  refreshBackendUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -22,6 +23,7 @@ const AuthContext = createContext<AuthContextType>({
   backendUser: null,
   loading: true,
   signOut: async () => {},
+  refreshBackendUser: async () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -54,9 +56,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setBackendUser(null);
   };
 
+  const refreshBackendUser = async () => {
+    try {
+      const { data } = await api.get<{ data: User }>("/api/users/me");
+      setBackendUser(data.data);
+    } catch {
+      // Silently fail — user can always refresh again
+    }
+  };
+
   return (
     <AuthContext.Provider
-      value={{ firebaseUser, backendUser, loading, signOut }}
+      value={{ firebaseUser, backendUser, loading, signOut, refreshBackendUser }}
     >
       {children}
     </AuthContext.Provider>

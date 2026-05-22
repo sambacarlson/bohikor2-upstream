@@ -4,12 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { auth } from "@/lib/firebase";
-import { Mail, Users, ArrowLeftRight, LogOut } from "lucide-react";
+import { LayoutDashboard, Mail, Users, ArrowLeftRight, LogOut } from "lucide-react";
 
 const navItems = [
-  { href: "/invite", label: "Invite", icon: Mail },
-  { href: "/users", label: "Users", icon: Users },
-  { href: "/requests", label: "Requests", icon: ArrowLeftRight },
+  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/invite", label: "Invite", icon: Mail },
+  { href: "/admin/users", label: "Users", icon: Users },
+  { href: "/admin/requests", label: "Requests", icon: ArrowLeftRight },
 ];
 
 export function Sidebar() {

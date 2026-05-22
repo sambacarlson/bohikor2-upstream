@@ -228,7 +228,7 @@ func (h *AdvanceHandler) ListUserRequests(c *gin.Context) {
 }
 
 type adminRequestsQuerier interface {
-	ListAdvanceRequests(ctx context.Context, arg db.ListAdvanceRequestsParams) ([]db.AdvanceRequest, error)
+	ListAdvanceRequestsWithUser(ctx context.Context, arg db.ListAdvanceRequestsWithUserParams) ([]db.ListAdvanceRequestsWithUserRow, error)
 }
 
 func HandleListAdminRequests(q adminRequestsQuerier) gin.HandlerFunc {
@@ -236,7 +236,7 @@ func HandleListAdminRequests(q adminRequestsQuerier) gin.HandlerFunc {
 		page := 1
 		perPage := 20
 
-		requests, err := q.ListAdvanceRequests(c.Request.Context(), db.ListAdvanceRequestsParams{
+		requests, err := q.ListAdvanceRequestsWithUser(c.Request.Context(), db.ListAdvanceRequestsWithUserParams{
 			Limit:  int32(perPage),
 			Offset: int32((page - 1) * perPage),
 		})
@@ -247,7 +247,7 @@ func HandleListAdminRequests(q adminRequestsQuerier) gin.HandlerFunc {
 		}
 
 		if requests == nil {
-			requests = []db.AdvanceRequest{}
+			requests = []db.ListAdvanceRequestsWithUserRow{}
 		}
 
 		JSONSuccess(c, http.StatusOK, requests)

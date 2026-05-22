@@ -5,6 +5,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -15,13 +16,17 @@ import { auth } from "@/src/lib/firebase";
 export default function LoginScreen() {
   const router = useRouter();
 
+  const [countryCode, setCountryCode] = useState("+237");
   const [loginPhone, setLoginPhone] = useState("");
   const [loginStep, setLoginStep] = useState<"phone" | "otp">("phone");
   const [loginOtp, setLoginOtp] = useState("");
   const [confirmationResult, setConfirmationResult] =
     useState<FirebaseAuthTypes.ConfirmationResult | null>(null);
   const [loginError, setLoginError] = useState("");
+  const [sendingCode, setSendingCode] = useState(false);
+  const [verifyingCode, setVerifyingCode] = useState(false);
 
+  const fullPhone = `${countryCode}${loginPhone}`;
   const isValidPhone = (phone: string) => /^\+[1-9]\d{6,14}$/.test(phone);
 
   const handleLoginSendCode = async () => {
@@ -30,12 +35,13 @@ export default function LoginScreen() {
       setLoginError("Phone number is required");
       return;
     }
-    if (!isValidPhone(loginPhone.trim())) {
-      setLoginError("Enter phone number with country code (e.g., +2376XXXXXXXX)");
+    if (!isValidPhone(fullPhone)) {
+      setLoginError("Enter a valid phone number with country code (e.g., +237 6XXXXXXXX)");
       return;
     }
+    setSendingCode(true);
     try {
-      const result = await auth.signInWithPhoneNumber(loginPhone.trim());
+      const result = await auth.signInWithPhoneNumber(fullPhone);
       setConfirmationResult(result);
       setLoginStep("otp");
     } catch (err: unknown) {
@@ -49,6 +55,8 @@ export default function LoginScreen() {
       } else {
         setLoginError("Failed to send verification code. Please try again.");
       }
+    } finally {
+      setSendingCode(false);
     }
   };
 
@@ -62,12 +70,15 @@ export default function LoginScreen() {
       setLoginError("No verification session found. Please try again.");
       return;
     }
+    setVerifyingCode(true);
     try {
       await confirmationResult.confirm(loginOtp);
       router.replace("/(app)/(tabs)/home");
     } catch {
       setLoginError("Invalid code. Please try again.");
       setLoginOtp("");
+    } finally {
+      setVerifyingCode(false);
     }
   };
 
@@ -92,29 +103,44 @@ export default function LoginScreen() {
           {loginStep === "phone" ? (
             <>
               <Text className="text-gray-700 mb-2 font-medium">Phone Number</Text>
-              <TextInput
-                className="border border-gray-300 rounded-lg px-4 py-3 text-base"
-                placeholder="+2376XXXXXXXX"
-                keyboardType="phone-pad"
-                value={loginPhone}
-                onChangeText={(text) => {
-                  setLoginPhone(text);
-                  setLoginError("");
-                }}
-              />
+              <View className="flex-row gap-2">
+                <TextInput
+                  className="border border-gray-300 rounded-lg px-3 py-3 text-base w-20 text-center"
+                  value={countryCode}
+                  onChangeText={(text) => {
+                    setCountryCode(text.startsWith("+") ? text : `+${text}`);
+                    setLoginError("");
+                  }}
+                  keyboardType="phone-pad"
+                />
+                <TextInput
+                  className="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-base"
+                  placeholder="6XXXXXXXX"
+                  keyboardType="phone-pad"
+                  value={loginPhone}
+                  onChangeText={(text) => {
+                    setLoginPhone(text);
+                    setLoginError("");
+                  }}
+                />
+              </View>
               {loginError ? (
                 <Text className="text-red-500 mt-2 text-sm">{loginError}</Text>
               ) : null}
               <TouchableOpacity
-                className={`mt-4 rounded-lg py-4 items-center ${
+                className={`mt-4 rounded-lg py-4 items-center flex-row justify-center ${
                   loginPhone.trim() ? "bg-blue-600" : "bg-blue-300"
                 }`}
                 onPress={handleLoginSendCode}
-                disabled={!loginPhone.trim()}
+                disabled={!loginPhone.trim() || sendingCode}
               >
-                <Text className="text-white font-semibold text-base">
-                  Continue
-                </Text>
+                {sendingCode ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <Text className="text-white font-semibold text-base">
+                    Continue
+                  </Text>
+                )}
               </TouchableOpacity>
             </>
           ) : (
@@ -123,7 +149,7 @@ export default function LoginScreen() {
                 Verification Code
               </Text>
               <Text className="text-gray-500 text-sm mb-2">
-                We sent a 6-digit code to {loginPhone}
+                We sent a 6-digit code to {fullPhone}
               </Text>
               <TextInput
                 className="border border-gray-300 rounded-lg px-4 py-3 text-center tracking-widest"
@@ -141,15 +167,19 @@ export default function LoginScreen() {
                 <Text className="text-red-500 mt-2 text-sm">{loginError}</Text>
               ) : null}
               <TouchableOpacity
-                className={`mt-4 rounded-lg py-4 items-center ${
+                className={`mt-4 rounded-lg py-4 items-center flex-row justify-center ${
                   loginOtp.length === 6 ? "bg-blue-600" : "bg-blue-300"
                 }`}
                 onPress={handleLoginVerify}
-                disabled={loginOtp.length !== 6}
+                disabled={loginOtp.length !== 6 || verifyingCode}
               >
-                <Text className="text-white font-semibold text-base">
-                  Verify
-                </Text>
+                {verifyingCode ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <Text className="text-white font-semibold text-base">
+                    Verify
+                  </Text>
+                )}
               </TouchableOpacity>
               <TouchableOpacity
                 className="mt-3 py-2 items-center"
