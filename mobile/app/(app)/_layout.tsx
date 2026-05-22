@@ -3,15 +3,14 @@ import { Stack, useRouter } from "expo-router";
 import { useAuth } from "@/src/providers/auth-provider";
 
 export default function AppLayout() {
-  const { firebaseUser } = useAuth();
+  const { firebaseUser, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!firebaseUser) {
+    if (!loading && !firebaseUser) {
       router.replace("/(auth)/login");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [firebaseUser]);
+  }, [firebaseUser, loading]);
 
   return <Stack screenOptions={{ headerShown: false }} />;
 }

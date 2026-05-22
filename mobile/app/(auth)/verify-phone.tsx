@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   View,
@@ -12,11 +12,19 @@ import {
 } from "react-native";
 import { type FirebaseAuthTypes } from "@react-native-firebase/auth";
 import { auth } from "@/src/lib/firebase";
+import { useAuth } from "@/src/providers/auth-provider";
 import { useVerifyPhoneOTP } from "@/src/hooks/use-auth";
 
 export default function VerifyPhoneScreen() {
   const router = useRouter();
+  const { firebaseUser } = useAuth();
   const { email } = useLocalSearchParams<{ email: string }>();
+
+  useEffect(() => {
+    if (firebaseUser) {
+      router.replace("/(app)/(tabs)/home");
+    }
+  }, [firebaseUser]);
   const [countryCode, setCountryCode] = useState("+237");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [otpCode, setOtpCode] = useState("");
