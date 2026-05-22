@@ -1,8 +1,6 @@
 # Binaries
 bin/
 
-# Generated code
-db/sqlc/
 
 # Git
 .git/
