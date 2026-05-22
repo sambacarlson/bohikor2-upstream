@@ -32,32 +32,32 @@ export default function TermsScreen() {
 
   if (backendUser?.is_terms_accepted) {
     return (
-      <View className="flex-1 bg-gray-50 items-center justify-center px-6">
-        <Text className="text-lg font-semibold text-gray-900 mb-2">
+      <View className="flex-1 bg-primary-50 items-center justify-center px-6">
+        <Text className="text-xl font-bold text-gray-900 mb-2">
           Terms Already Accepted
         </Text>
-        <Text className="text-sm text-gray-500 text-center mb-4">
+        <Text className="text-base text-gray-500 text-center mb-6">
           You have already accepted the terms and conditions.
         </Text>
         <TouchableOpacity
-          className="bg-blue-600 rounded-xl px-6 py-3"
+          className="bg-primary-600 rounded-xl px-6 py-3"
           onPress={() => router.back()}
         >
-          <Text className="text-white text-base font-semibold">Go Back</Text>
+          <Text className="text-white text-lg font-semibold">Go Back</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <ScrollView className="flex-1 bg-gray-50">
-      <View className="px-6 pt-12 pb-6">
-        <Text className="text-2xl font-bold text-gray-900">Terms & Conditions</Text>
+    <ScrollView className="flex-1 bg-primary-50">
+      <View className="px-6 py-4">
+        <Text className="text-3xl font-bold text-gray-900">Terms & Conditions</Text>
       </View>
 
       <View className="px-6 mb-6">
         <View className="bg-white rounded-xl p-6 shadow-sm">
-          <Text className="text-sm text-gray-700 leading-relaxed">{TERMS_TEXT}</Text>
+          <Text className="text-base text-gray-700 leading-relaxed">{TERMS_TEXT}</Text>
         </View>
       </View>
 
@@ -69,31 +69,31 @@ export default function TermsScreen() {
         >
           <View
             className={`w-6 h-6 rounded border-2 mr-3 items-center justify-center ${
-              accepted ? "bg-blue-600 border-blue-600" : "border-gray-300"
+              accepted ? "bg-primary-600 border-primary-600" : "border-gray-300"
             }`}
           >
             {accepted && <Text className="text-white text-sm">✓</Text>}
           </View>
-          <Text className="text-sm text-gray-700">
+          <Text className="text-base text-gray-700">
             I have read and accept the terms and conditions
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           className={`rounded-xl py-4 items-center ${
-            accepted && !acceptTerms.isPending ? "bg-blue-600" : "bg-gray-300"
+            accepted && !acceptTerms.isPending ? "bg-primary-600" : "bg-gray-300"
           }`}
           onPress={handleAccept}
           disabled={!accepted || acceptTerms.isPending}
           testID="accept-terms-button"
         >
-          <Text className="text-white text-base font-semibold">
+          <Text className="text-white text-lg font-semibold">
             {acceptTerms.isPending ? "Accepting..." : "Accept Terms"}
           </Text>
         </TouchableOpacity>
 
         {acceptTerms.isError && (
-          <Text className="text-red-500 text-sm text-center mt-4">
+          <Text className="text-red-500 text-base text-center mt-4">
             Failed to accept terms. Please try again.
           </Text>
         )}

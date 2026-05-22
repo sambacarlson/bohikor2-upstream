@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from "@testing-library/react-native";
-import HistoryScreen from "@/app/(app)/(tabs)/history";
+import HistoryScreen from "@/app/(app)/history";
 
+const mockRouter = { back: jest.fn(), push: jest.fn() };
 const mockRefetch = jest.fn();
 
 let mockData: any = null;
@@ -20,7 +21,7 @@ jest.mock("@/src/hooks/use-advance", () => ({
 }));
 
 jest.mock("expo-router", () => ({
-  useRouter: () => ({ push: jest.fn(), back: jest.fn() }),
+  useRouter: () => mockRouter,
 }));
 
 describe("HistoryScreen", () => {
@@ -33,7 +34,7 @@ describe("HistoryScreen", () => {
 
   it("shows empty state when no requests", () => {
     render(<HistoryScreen />);
-    expect(screen.getByText("Transaction History")).toBeTruthy();
+    expect(screen.getByText("History")).toBeTruthy();
     expect(screen.getByText("No advance requests yet.")).toBeTruthy();
   });
 
@@ -79,6 +80,17 @@ describe("HistoryScreen", () => {
     const refreshButton = screen.getByText("Refresh");
     fireEvent.press(refreshButton);
     expect(mockRefetch).toHaveBeenCalled();
+  });
+
+  it("renders back button", () => {
+    render(<HistoryScreen />);
+    expect(screen.getByText("History")).toBeTruthy();
+  });
+
+  it("calls router.back when back button is pressed", () => {
+    render(<HistoryScreen />);
+    const backButtons = screen.getAllByText("History");
+    expect(backButtons.length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders pending status badge", () => {

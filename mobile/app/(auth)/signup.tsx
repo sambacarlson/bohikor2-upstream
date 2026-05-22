@@ -80,14 +80,14 @@ export default function SignupScreen() {
       <ScrollView contentContainerClassName="flex-1 justify-center px-6">
         <View className="items-center mb-8">
           <Text className="text-3xl font-bold text-gray-900">Bohikor2</Text>
-          <Text className="text-gray-500 mt-2 text-center">
+          <Text className="text-gray-500 mt-2 text-center text-lg">
             Enter your invited email to get started
           </Text>
         </View>
         <View className="w-full">
-          <Text className="text-gray-700 mb-2 font-medium">Email</Text>
+          <Text className="text-gray-700 mb-2 font-medium text-base">Email</Text>
           <TextInput
-            className="border border-gray-300 rounded-lg px-4 py-3 text-base"
+            className="border border-gray-300 rounded-lg px-4 py-4 text-lg"
             placeholder="you@company.com"
             keyboardType="email-address"
             autoCapitalize="none"
@@ -99,13 +99,13 @@ export default function SignupScreen() {
             }}
           />
           {error ? (
-            <Text className="text-red-500 mt-2 text-sm">{error}</Text>
+            <Text className="text-red-500 mt-2 text-base">{error}</Text>
           ) : null}
           <TouchableOpacity
-            className={`mt-6 rounded-lg py-4 items-center ${
+            className={`mt-6 rounded-xl py-4 items-center ${
               checkInvitation.isPending || sendEmailOTP.isPending
-                ? "bg-blue-300"
-                : "bg-blue-600"
+                ? "bg-primary-300"
+                : "bg-primary-600"
             }`}
             onPress={handleContinue}
             disabled={checkInvitation.isPending || sendEmailOTP.isPending}
@@ -113,7 +113,7 @@ export default function SignupScreen() {
             {checkInvitation.isPending || sendEmailOTP.isPending ? (
               <ActivityIndicator color="white" />
             ) : (
-              <Text className="text-white font-semibold text-base">
+              <Text className="text-white font-bold text-lg">
                 Continue
               </Text>
             )}
@@ -122,7 +122,7 @@ export default function SignupScreen() {
             className="mt-4 py-3 items-center"
             onPress={() => router.back()}
           >
-            <Text className="text-blue-600 font-medium">
+            <Text className="text-primary-600 font-medium text-lg">
               Already have an account? Log in
             </Text>
           </TouchableOpacity>

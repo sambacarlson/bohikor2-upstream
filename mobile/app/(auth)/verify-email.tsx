@@ -69,22 +69,22 @@ export default function VerifyEmailScreen() {
     >
       <ScrollView contentContainerClassName="flex-1 justify-center px-6">
         <View className="items-center mb-8">
-          <Text className="text-2xl font-bold text-gray-900">
+          <Text className="text-3xl font-bold text-gray-900">
             Check your email
           </Text>
-          <Text className="text-gray-500 mt-2 text-center">
+          <Text className="text-gray-500 mt-2 text-center text-lg">
             We sent a 6-digit code to{"\n"}
-            <Text className="font-medium text-gray-700">{email}</Text>
+            <Text className="font-medium text-gray-700 text-lg">{email}</Text>
           </Text>
         </View>
 
         <View className="w-full">
-          <Text className="text-gray-700 mb-2 font-medium">
+          <Text className="text-gray-700 mb-2 font-medium text-base">
             Verification code
           </Text>
           <TextInput
             ref={inputRef}
-            className="border border-gray-300 rounded-lg px-4 py-3 text-center tracking-widest"
+            className="border border-gray-300 rounded-lg px-4 py-4 text-lg text-center tracking-widest"
             placeholder="000000"
             keyboardType="number-pad"
             maxLength={6}
@@ -97,13 +97,13 @@ export default function VerifyEmailScreen() {
           />
 
           {error ? (
-            <Text className="text-red-500 mt-2 text-sm">{error}</Text>
+            <Text className="text-red-500 mt-2 text-base">{error}</Text>
           ) : null}
 
           <TouchableOpacity
-            className={`mt-6 rounded-lg py-4 items-center ${verifyEmailOTP.isPending
-                ? "bg-blue-300"
-                : "bg-blue-600"
+            className={`mt-6 rounded-xl py-4 items-center flex-row justify-center ${verifyEmailOTP.isPending
+                ? "bg-primary-300"
+                : "bg-primary-600"
               }`}
             onPress={handleVerify}
             disabled={verifyEmailOTP.isPending || code.length !== 6}
@@ -111,7 +111,7 @@ export default function VerifyEmailScreen() {
             {verifyEmailOTP.isPending ? (
               <ActivityIndicator color="white" />
             ) : (
-              <Text className="text-white font-semibold text-base">Verify</Text>
+              <Text className="text-white font-bold text-lg">Verify</Text>
             )}
           </TouchableOpacity>
 
@@ -124,11 +124,11 @@ export default function VerifyEmailScreen() {
               <ActivityIndicator />
             ) : (
               <Text
-                className={
+                className={`text-lg ${
                   resendCooldown > 0
                     ? "text-gray-400"
-                    : "text-blue-600 font-medium"
-                }
+                    : "text-primary-600 font-medium"
+                }`}
               >
                 {resendCooldown > 0
                   ? `Resend code in ${resendCooldown}s`

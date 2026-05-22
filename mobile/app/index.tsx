@@ -14,7 +14,7 @@ export default function Index() {
   }
 
   if (firebaseUser) {
-    return <Redirect href="/(app)/(tabs)/home" />;
+    return <Redirect href="/(app)/home" />;
   }
 
   return <Redirect href="/(auth)/login" />;

@@ -20,7 +20,7 @@ export default function LoginScreen() {
 
   useEffect(() => {
     if (firebaseUser) {
-      router.replace("/(app)/(tabs)/home");
+      router.replace("/(app)/home");
     }
   }, [firebaseUser]);
 
@@ -81,7 +81,7 @@ export default function LoginScreen() {
     setVerifyingCode(true);
     try {
       await confirmationResult.confirm(loginOtp);
-      router.replace("/(app)/(tabs)/home");
+      router.replace("/(app)/home");
     } catch {
       setLoginError("Invalid code. Please try again.");
       setLoginOtp("");
@@ -98,22 +98,22 @@ export default function LoginScreen() {
       <ScrollView contentContainerClassName="flex-1 justify-center px-6">
         <View className="items-center mb-8">
           <Text className="text-3xl font-bold text-gray-900">Bohikor2</Text>
-          <Text className="text-gray-500 mt-2 text-center">
+          <Text className="text-gray-500 mt-2 text-center text-lg">
             Salary Advance
           </Text>
         </View>
 
         <View className="w-full mb-6">
-          <Text className="text-lg font-semibold text-gray-900 mb-4">
+          <Text className="text-xl font-bold text-gray-900 mb-5">
             Log In
           </Text>
 
           {loginStep === "phone" ? (
             <>
-              <Text className="text-gray-700 mb-2 font-medium">Phone Number</Text>
-              <View className="flex-row gap-2">
+              <Text className="text-gray-700 mb-2 font-medium text-base">Phone Number</Text>
+              <View className="flex-row gap-3">
                 <TextInput
-                  className="border border-gray-300 rounded-lg px-3 py-3 text-base w-20 text-center"
+                  className="border border-gray-300 rounded-lg px-3 py-4 text-lg w-20 text-center"
                   value={countryCode}
                   onChangeText={(text) => {
                     setCountryCode(text.startsWith("+") ? text : `+${text}`);
@@ -122,7 +122,7 @@ export default function LoginScreen() {
                   keyboardType="phone-pad"
                 />
                 <TextInput
-                  className="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-base"
+                  className="flex-1 border border-gray-300 rounded-lg px-4 py-4 text-lg"
                   placeholder="6XXXXXXXX"
                   keyboardType="phone-pad"
                   value={loginPhone}
@@ -133,11 +133,11 @@ export default function LoginScreen() {
                 />
               </View>
               {loginError ? (
-                <Text className="text-red-500 mt-2 text-sm">{loginError}</Text>
+                <Text className="text-red-500 mt-2 text-base">{loginError}</Text>
               ) : null}
               <TouchableOpacity
-                className={`mt-4 rounded-lg py-4 items-center flex-row justify-center ${
-                  loginPhone.trim() ? "bg-blue-600" : "bg-blue-300"
+                className={`mt-6 rounded-xl py-4 items-center flex-row justify-center ${
+                  loginPhone.trim() ? "bg-primary-600" : "bg-primary-300"
                 }`}
                 onPress={handleLoginSendCode}
                 disabled={!loginPhone.trim() || sendingCode}
@@ -145,7 +145,7 @@ export default function LoginScreen() {
                 {sendingCode ? (
                   <ActivityIndicator color="white" />
                 ) : (
-                  <Text className="text-white font-semibold text-base">
+                  <Text className="text-white font-bold text-lg">
                     Continue
                   </Text>
                 )}
@@ -153,14 +153,14 @@ export default function LoginScreen() {
             </>
           ) : (
             <>
-              <Text className="text-gray-700 mb-2 font-medium">
+              <Text className="text-gray-700 mb-2 font-medium text-base">
                 Verification Code
               </Text>
-              <Text className="text-gray-500 text-sm mb-2">
+              <Text className="text-gray-500 text-base mb-3">
                 We sent a 6-digit code to {fullPhone}
               </Text>
               <TextInput
-                className="border border-gray-300 rounded-lg px-4 py-3 text-center tracking-widest"
+                className="border border-gray-300 rounded-lg px-4 py-4 text-lg text-center tracking-widest"
                 placeholder="000000"
                 keyboardType="number-pad"
                 maxLength={6}
@@ -172,11 +172,11 @@ export default function LoginScreen() {
                 autoFocus
               />
               {loginError ? (
-                <Text className="text-red-500 mt-2 text-sm">{loginError}</Text>
+                <Text className="text-red-500 mt-2 text-base">{loginError}</Text>
               ) : null}
               <TouchableOpacity
-                className={`mt-4 rounded-lg py-4 items-center flex-row justify-center ${
-                  loginOtp.length === 6 ? "bg-blue-600" : "bg-blue-300"
+                className={`mt-6 rounded-xl py-4 items-center flex-row justify-center ${
+                  loginOtp.length === 6 ? "bg-primary-600" : "bg-primary-300"
                 }`}
                 onPress={handleLoginVerify}
                 disabled={loginOtp.length !== 6 || verifyingCode}
@@ -184,20 +184,20 @@ export default function LoginScreen() {
                 {verifyingCode ? (
                   <ActivityIndicator color="white" />
                 ) : (
-                  <Text className="text-white font-semibold text-base">
+                  <Text className="text-white font-bold text-lg">
                     Verify
                   </Text>
                 )}
               </TouchableOpacity>
               <TouchableOpacity
-                className="mt-3 py-2 items-center"
+                className="mt-4 py-3 items-center"
                 onPress={() => {
                   setLoginStep("phone");
                   setLoginOtp("");
                   setLoginError("");
                 }}
               >
-                <Text className="text-blue-600 font-medium">
+                <Text className="text-primary-600 font-medium text-lg">
                   Change phone number
                 </Text>
               </TouchableOpacity>
@@ -207,7 +207,7 @@ export default function LoginScreen() {
 
         <View className="flex-row items-center my-4">
           <View className="flex-1 h-px bg-gray-300" />
-          <Text className="mx-4 text-gray-500 font-medium">or</Text>
+          <Text className="mx-4 text-gray-500 font-medium text-base">or</Text>
           <View className="flex-1 h-px bg-gray-300" />
         </View>
 
@@ -216,10 +216,10 @@ export default function LoginScreen() {
             className="rounded-lg py-4 items-center bg-gray-100 border border-gray-300"
             onPress={() => router.push("/(auth)/signup")}
           >
-            <Text className="text-gray-900 font-semibold text-base">
+            <Text className="text-gray-900 font-bold text-lg">
               Start Fresh
             </Text>
-            <Text className="text-gray-500 text-sm mt-1">
+            <Text className="text-gray-500 text-base mt-1">
               Sign up with an invited email
             </Text>
           </TouchableOpacity>

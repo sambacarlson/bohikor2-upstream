@@ -22,7 +22,7 @@ export default function VerifyPhoneScreen() {
 
   useEffect(() => {
     if (firebaseUser) {
-      router.replace("/(app)/(tabs)/home");
+      router.replace("/(app)/home");
     }
   }, [firebaseUser]);
   const [countryCode, setCountryCode] = useState("+237");
@@ -102,7 +102,7 @@ export default function VerifyPhoneScreen() {
 
     try {
       await verifyPhoneOTP.mutateAsync({ email, phoneNumber: fullPhone });
-      router.replace("/(app)/(tabs)/home");
+      router.replace("/(app)/home");
     } catch (err: unknown) {
       console.log("err2=====: ", err);
       if (
@@ -130,21 +130,21 @@ export default function VerifyPhoneScreen() {
         {step === "phone" ? (
           <>
             <View className="items-center mb-8">
-              <Text className="text-2xl font-bold text-gray-900">
+              <Text className="text-3xl font-bold text-gray-900">
                 Verify your phone
               </Text>
-              <Text className="text-gray-500 mt-2 text-center">
+              <Text className="text-gray-500 mt-2 text-center text-lg">
                 Enter your phone number to receive a verification code via SMS
               </Text>
             </View>
 
             <View className="w-full">
-              <Text className="text-gray-700 mb-2 font-medium">
+              <Text className="text-gray-700 mb-2 font-medium text-base">
                 Phone number
               </Text>
-              <View className="flex-row gap-2">
+              <View className="flex-row gap-3">
                 <TextInput
-                  className="border border-gray-300 rounded-lg px-3 py-3 text-base w-20 text-center"
+                  className="border border-gray-300 rounded-lg px-3 py-4 text-lg w-20 text-center"
                   value={countryCode}
                   onChangeText={(text) => {
                     setCountryCode(text.startsWith("+") ? text : `+${text}`);
@@ -153,7 +153,7 @@ export default function VerifyPhoneScreen() {
                   keyboardType="phone-pad"
                 />
                 <TextInput
-                  className="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-base"
+                  className="flex-1 border border-gray-300 rounded-lg px-4 py-4 text-lg"
                   placeholder="6XXXXXXXX"
                   keyboardType="phone-pad"
                   value={phoneNumber}
@@ -166,11 +166,11 @@ export default function VerifyPhoneScreen() {
               </View>
 
               {error ? (
-                <Text className="text-red-500 mt-2 text-sm">{error}</Text>
+                <Text className="text-red-500 mt-2 text-base">{error}</Text>
               ) : null}
 
               <TouchableOpacity
-                className={`mt-6 rounded-lg py-4 items-center flex-row justify-center ${verifyPhoneOTP.isPending || sendingFirebase ? "bg-blue-300" : "bg-blue-600"
+                className={`mt-6 rounded-xl py-4 items-center flex-row justify-center ${verifyPhoneOTP.isPending || sendingFirebase ? "bg-primary-300" : "bg-primary-600"
                   }`}
                 onPress={handleSendCode}
                 disabled={verifyPhoneOTP.isPending || sendingFirebase}
@@ -178,7 +178,7 @@ export default function VerifyPhoneScreen() {
                 {verifyPhoneOTP.isPending || sendingFirebase ? (
                   <ActivityIndicator color="white" />
                 ) : (
-                  <Text className="text-white font-semibold text-base">
+                  <Text className="text-white font-bold text-lg">
                     Send Code
                   </Text>
                 )}
@@ -188,23 +188,23 @@ export default function VerifyPhoneScreen() {
         ) : (
           <>
             <View className="items-center mb-8">
-              <Text className="text-2xl font-bold text-gray-900">
+              <Text className="text-3xl font-bold text-gray-900">
                 Enter SMS code
               </Text>
-              <Text className="text-gray-500 mt-2 text-center">
+              <Text className="text-gray-500 mt-2 text-center text-lg">
                 We sent a 6-digit code to{"\n"}
-                <Text className="font-medium text-gray-700">
+                <Text className="font-medium text-gray-700 text-lg">
                   {fullPhone}
                 </Text>
               </Text>
             </View>
 
             <View className="w-full">
-              <Text className="text-gray-700 mb-2 font-medium">
+              <Text className="text-gray-700 mb-2 font-medium text-base">
                 Verification code
               </Text>
               <TextInput
-                className="border border-gray-300 rounded-lg px-4 py-3 text-center tracking-widest"
+                className="border border-gray-300 rounded-lg px-4 py-4 text-lg text-center tracking-widest"
                 placeholder="000000"
                 keyboardType="number-pad"
                 maxLength={6}
@@ -217,11 +217,11 @@ export default function VerifyPhoneScreen() {
               />
 
               {error ? (
-                <Text className="text-red-500 mt-2 text-sm">{error}</Text>
+                <Text className="text-red-500 mt-2 text-base">{error}</Text>
               ) : null}
 
               <TouchableOpacity
-                className={`mt-6 rounded-lg py-4 items-center flex-row justify-center ${verifyPhoneOTP.isPending || verifyingFirebase ? "bg-blue-300" : "bg-blue-600"
+                className={`mt-6 rounded-xl py-4 items-center flex-row justify-center ${verifyPhoneOTP.isPending || verifyingFirebase ? "bg-primary-300" : "bg-primary-600"
                   }`}
                 onPress={handleVerifyOTP}
                 disabled={verifyPhoneOTP.isPending || verifyingFirebase || otpCode.length !== 6}
@@ -229,7 +229,7 @@ export default function VerifyPhoneScreen() {
                 {verifyPhoneOTP.isPending || verifyingFirebase ? (
                   <ActivityIndicator color="white" />
                 ) : (
-                  <Text className="text-white font-semibold text-base">
+                  <Text className="text-white font-bold text-lg">
                     Verify & Continue
                   </Text>
                 )}
@@ -243,7 +243,7 @@ export default function VerifyPhoneScreen() {
                   setError("");
                 }}
               >
-                <Text className="text-blue-600 font-medium">
+                <Text className="text-primary-600 font-medium text-lg">
                   Change phone number
                 </Text>
               </TouchableOpacity>
