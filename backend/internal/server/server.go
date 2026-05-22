@@ -61,8 +61,7 @@ func New(cfg *config.Config) (*Server, error) {
 	queries := db.New(pool)
 
 	campayClient := campay.NewClient(
-		cfg.CampayAPIUsername,
-		cfg.CampayAPIPassword,
+		cfg.CampayPermanentAccessToken,
 		cfg.CampayBaseURL,
 		cfg.CampayWebhookSecret,
 	)

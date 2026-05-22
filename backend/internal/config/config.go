@@ -18,10 +18,9 @@ type Config struct {
 	FirebaseCredentialsJSON string `env:"FIREBASE_CREDENTIALS_JSON" envDefault:""`
 
 	// Campay
-	CampayAPIUsername   string `env:"CAMPAY_API_USERNAME" envDefault:""`
-	CampayAPIPassword   string `env:"CAMPAY_API_PASSWORD" envDefault:""`
-	CampayWebhookSecret string `env:"CAMPAY_WEBHOOK_SECRET" envDefault:""`
-	CampayBaseURL       string `env:"CAMPAY_BASE_URL" envDefault:"https://demo.campay.net/api"`
+	CampayPermanentAccessToken string `env:"CAMPAY_PERMANENT_ACCESS_TOKEN" envDefault:""`
+	CampayWebhookSecret        string `env:"CAMPAY_WEBHOOK_SECRET" envDefault:""`
+	CampayBaseURL              string `env:"CAMPAY_BASE_URL" envDefault:"https://demo.campay.net/api"`
 
 	// Resend
 	ResendAPIKey string `env:"RESEND_API_KEY" envDefault:""`
