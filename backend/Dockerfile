@@ -28,6 +28,7 @@ ENV TZ=Africa/Douala
 
 # Copy the binary from builder
 COPY --from=builder /bohikor2 .
+COPY --from=builder /app/migrations ./migrations/
 
 # Expose port
 EXPOSE 8080
