@@ -1,0 +1,49 @@
+{
+  "cli": {
+    "version": ">= 19.0.8",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "distribution": "store",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://bohikor2-upstream.onrender.com"
+      }
+    },
+    "preview-ios": {
+      "extends": "preview",
+      "ios": {
+        "simulator": true
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "distribution": "store",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://bohikor2-upstream.onrender.com",
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyB4cDvbnKwB5f-ezrGbyLLLK7S8Dqnq1Sk",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "bohikor2.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "bohikor2",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "bohikor2.firebasestorage.app",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "534673074930",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:534673074930:web:c7c4be74dea76d16963e6b"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "android": {
+        "track": "internal"
+      },
+      "ios": {
+        "appleId": "your-apple-id@example.com",
+        "ascAppId": "your-app-store-connect-app-id",
+        "appleTeamId": "your-apple-team-id"
+      }
+    }
+  }
+}

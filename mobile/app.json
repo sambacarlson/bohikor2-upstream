@@ -2,7 +2,7 @@
   "expo": {
     "name": "Bohikor2",
     "slug": "bohikor2-mobile",
-    "version": "1.0.0",
+    "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -46,9 +46,21 @@
         {
           "ios": {
             "useFrameworks": "static"
+          },
+          "android": {
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "buildToolsVersion": "35.0.0"
           }
         }
       ]
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "f333d324-ff36-4159-9ef9-8ce6f656ab41"
+      }
+    },
+    "owner": "sambacarlson"
   }
 }
