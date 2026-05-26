@@ -1,7 +1,6 @@
 # Binaries
 bin/
 
-
 # Git
 .git/
 .gitignore
@@ -28,8 +27,3 @@ coverage.out
 # Docker
 Dockerfile
 .dockerignore
-
-# Docs (not needed in container)
-../docs/
-../PLAN.md
-../AGENTS.md

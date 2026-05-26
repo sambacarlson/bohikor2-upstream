@@ -34,13 +34,14 @@ func NewClient(ctx context.Context, credentialsJSON, projectID string) (*Client,
 	}
 
 	// Write credentials to temp file and set GOOGLE_APPLICATION_CREDENTIALS
-	// This avoids deprecated option.WithCredentialsJSON/File
+	// This avoids deprecated option.WithCredentialsJSON/File.
+	// The temp file persists for the lifetime of the process — never defer-clean it here
+	// because other parts of the Firebase SDK may re-read credentials (e.g. token refresh).
 	tmpFile, err := os.CreateTemp("", "firebase-creds-*.json")
 	if err != nil {
 		return nil, fmt.Errorf("create temp credentials file: %w", err)
 	}
 	tmpPath := tmpFile.Name()
-	defer func() { _ = os.Remove(tmpPath) }()
 
 	if _, err := tmpFile.WriteString(credentialsJSON); err != nil {
 		_ = tmpFile.Close()
@@ -50,18 +51,9 @@ func NewClient(ctx context.Context, credentialsJSON, projectID string) (*Client,
 		return nil, fmt.Errorf("close temp credentials file: %w", err)
 	}
 
-	// Set env var for Firebase SDK to pick up
-	origCreds := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
 	if err := os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", tmpPath); err != nil {
 		return nil, fmt.Errorf("set GOOGLE_APPLICATION_CREDENTIALS: %w", err)
 	}
-	defer func() {
-		if origCreds == "" {
-			_ = os.Unsetenv("GOOGLE_APPLICATION_CREDENTIALS")
-		} else {
-			_ = os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", origCreds)
-		}
-	}()
 
 	app, err := firebase.NewApp(ctx, &firebase.Config{
 		ProjectID: projectID,

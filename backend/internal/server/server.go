@@ -18,6 +18,7 @@ import (
 	db "github.com/Iknite-Space/bohikor2/db/sqlc"
 	"github.com/Iknite-Space/bohikor2/internal/campay"
 	"github.com/Iknite-Space/bohikor2/internal/config"
+	"github.com/Iknite-Space/bohikor2/internal/database"
 	"github.com/Iknite-Space/bohikor2/internal/email"
 	"github.com/Iknite-Space/bohikor2/internal/firebaseapp"
 	"github.com/Iknite-Space/bohikor2/internal/handler"
@@ -49,6 +50,11 @@ func New(cfg *config.Config) (*Server, error) {
 	pool, err := repository.NewDB(ctx, cfg.DatabaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("initialize database: %w", err)
+	}
+
+	if err := database.RunMigrations(cfg.DatabaseURL, "migrations"); err != nil {
+		pool.Close()
+		return nil, fmt.Errorf("run migrations: %w", err)
 	}
 
 	fb, err := firebaseapp.NewClient(ctx, cfg.FirebaseCredentialsJSON, cfg.FirebaseProjectID)
