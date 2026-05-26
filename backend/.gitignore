@@ -2,8 +2,6 @@
 bin/
 *.exe
 
-# Generated code
-db/sqlc/
 
 # Env files
 .env
